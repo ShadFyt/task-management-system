@@ -1,4 +1,10 @@
-import { Controller, Request, Post, UseGuards, Body } from '@nestjs/common';
+import {
+  Controller,
+  Request,
+  Post,
+  UseGuards,
+  SerializeOptions,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { UserDto } from '@task-management-system/data';
@@ -12,6 +18,7 @@ interface AuthenticatedRequest extends Request {
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
+  @SerializeOptions({ type: UserDto })
   @UseGuards(AuthGuard('local'))
   @Post('login')
   @ApiOperation({ summary: 'User login' })
