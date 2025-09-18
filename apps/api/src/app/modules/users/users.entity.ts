@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { Role } from '../roles/roles.entity';
 import { Organization } from '../organizations/organizations.entity';
-
+import { Task } from '../tasks/tasks.entity';
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
@@ -35,6 +35,9 @@ export class User {
   })
   @JoinColumn({ name: 'organizationId' })
   organization: Organization;
+
+  @OneToMany(() => Task, (task) => task.user)
+  tasks: Task[];
 
   @Column({ default: true })
   isActive: boolean;
