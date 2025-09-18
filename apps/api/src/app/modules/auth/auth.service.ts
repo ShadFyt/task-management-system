@@ -1,0 +1,85 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { UserService } from '../users/user.service';
+import { UserDto } from '@task-management-system/data';
+import * as bcrypt from 'bcrypt';
+import { AuthBodyDto } from '@task-management-system/auth';
+import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Token } from './token.entity';
+
+@Injectable()
+export class AuthService {
+  private readonly logger = new Logger(AuthService.name, { timestamp: true });
+
+  constructor(
+    private readonly userService: UserService,
+    private jwtService: JwtService,
+    @InjectRepository(Token)
+    private tokenRepository: Repository<Token>
+  ) {}
+
+  async validateUser(dto: AuthBodyDto): Promise<UserDto | null> {
+    const { email, password } = dto;
+    this.logger.log(`Validating user: ${email}`);
+    const user = await this.userService.findOneByEmail(email);
+    if (user && (await this.comparePassword(password, user.password))) {
+      const { password: _, ...result } = user;
+      return result;
+    }
+    return null;
+  }
+
+  async login(user: UserDto) {
+    const payload = { sub: user.id, email: user.email };
+
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: '15m',
+    });
+
+    const refreshToken = this.jwtService.sign(payload, {
+      expiresIn: '7d',
+    });
+
+    const hashedRefreshToken = await this.hashPassword(refreshToken);
+    const refreshTokenEntity = this.tokenRepository.create({
+      type: 'refresh',
+      jwtToken: hashedRefreshToken,
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+    });
+
+    await this.tokenRepository.save(refreshTokenEntity);
+
+    this.logger.log(`Generated tokens for user: ${user.email}`);
+
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      user,
+    };
+  }
+
+  /**
+   * Hash a plain text password using bcrypt
+   * @param password - Plain text password to hash
+   * @returns Hashed password
+   */
+  async hashPassword(password: string): Promise<string> {
+    const saltRounds = 12;
+    return bcrypt.hash(password, saltRounds);
+  }
+
+  /**
+   * Compare a plain text password with a hashed password
+   * @param password - Plain text password
+   * @param hashedPassword - Hashed password to compare against
+   * @returns True if passwords match, false otherwise
+   */
+  async comparePassword(
+    password: string,
+    hashedPassword: string
+  ): Promise<boolean> {
+    return bcrypt.compare(password, hashedPassword);
+  }
+}
