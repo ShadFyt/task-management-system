@@ -9,6 +9,7 @@ import { RolesModule } from './modules/roles/roles.module';
 import { UsersModule } from './modules/users/users.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { TasksModule } from './modules/tasks/tasks.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { TasksModule } from './modules/tasks/tasks.module';
       }),
       inject: [ConfigService],
     }),
+    AuthModule,
     PermissionModule,
     RolesModule,
     UsersModule,
