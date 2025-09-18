@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { TasksRepo } from './tasks.repo';
 import { CreateTaskDto } from '@task-management-system/data';
 import { Task } from './tasks.entity';
@@ -39,10 +39,21 @@ export class TasksService {
 
   /**
    * Creates a new task for the authenticated user within their organization.
-   * Ensures tasks are created with organization scope for proper access control.
+   * Applies permission checking based on task type:
+   * - Personal tasks: Anyone can create (always owned by creator)
+   * - Work tasks: Only admin/owner roles can create
    */
   async createTask(authUser: AuthUser, dto: CreateTaskDto): Promise<Task> {
-    const { sub, organizationId } = authUser;
+    const { sub, organizationId, role } = authUser;
+
+    if (dto.type === 'work') {
+      if (!['admin', 'owner'].includes(role.name)) {
+        throw new ForbiddenException(
+          'Only administrators and owners can create work tasks'
+        );
+      }
+    }
+
     return this.repo.createTask({
       ...dto,
       userId: sub,

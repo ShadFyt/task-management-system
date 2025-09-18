@@ -17,8 +17,9 @@ export class TasksController {
   }
 
   /**
-   * Creates a new task for the authenticated user within their organization scope.
-   * Ensures tasks are created with organization scope for proper access control.
+   * Creates a new task with contextual permission checking.
+   * - Personal tasks: Anyone can create (always owned by creator)
+   * - Work tasks: Only admin/owner roles can create
    * @param user - The authenticated user object.
    * @param dto - The task data to create.
    * @returns A promise resolving to the created task.

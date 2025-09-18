@@ -5,7 +5,12 @@ import { Repository } from 'typeorm';
 import { AuthService } from '../modules/auth/auth.service';
 import { Role } from '../modules/roles/roles.entity';
 import { Permission } from '../modules/permissions/permissions.entity';
-import { RoleName, PermissionAction, PermissionEntity, PermissionAccess } from '@task-management-system/data';
+import {
+  RoleName,
+  PermissionAction,
+  PermissionEntity,
+  PermissionAccess,
+} from '@task-management-system/data';
 import { Organization } from '../modules/organizations/organizations.entity';
 import { isNil } from '@nestjs/common/utils/shared.utils';
 
@@ -29,25 +34,100 @@ const defaultPermissions: Array<{
   description: string;
 }> = [
   // Task permissions
-  { action: 'create', entity: 'task', access: 'own', description: 'Create tasks within own scope' },
-  { action: 'create', entity: 'task', access: 'any', description: 'Create tasks for any user/organization' },
-  { action: 'read', entity: 'task', access: 'own', description: 'Read own tasks' },
-  { action: 'read', entity: 'task', access: 'any', description: 'Read all tasks in organization' },
-  { action: 'update', entity: 'task', access: 'own', description: 'Update own tasks' },
-  { action: 'update', entity: 'task', access: 'any', description: 'Update any task in organization' },
-  { action: 'delete', entity: 'task', access: 'own', description: 'Delete own tasks' },
-  { action: 'delete', entity: 'task', access: 'any', description: 'Delete any task in organization' },
+  {
+    action: 'create',
+    entity: 'task',
+    access: 'own',
+    description: 'Create tasks within own scope',
+  },
+  {
+    action: 'create',
+    entity: 'task',
+    access: 'any',
+    description: 'Create tasks for any user/organization',
+  },
+  {
+    action: 'read',
+    entity: 'task',
+    access: 'own',
+    description: 'Read own tasks',
+  },
+  {
+    action: 'read',
+    entity: 'task',
+    access: 'any',
+    description: 'Read all tasks in organization',
+  },
+  {
+    action: 'update',
+    entity: 'task',
+    access: 'own',
+    description: 'Update own tasks',
+  },
+  {
+    action: 'update',
+    entity: 'task',
+    access: 'any',
+    description: 'Update any task in organization',
+  },
+  {
+    action: 'delete',
+    entity: 'task',
+    access: 'own',
+    description: 'Delete own tasks',
+  },
+  {
+    action: 'delete',
+    entity: 'task',
+    access: 'any',
+    description: 'Delete any task in organization',
+  },
 
   // User permissions
-  { action: 'create', entity: 'user', access: 'any', description: 'Create new users' },
-  { action: 'read', entity: 'user', access: 'own', description: 'Read own user profile' },
-  { action: 'read', entity: 'user', access: 'any', description: 'Read all user profiles' },
-  { action: 'update', entity: 'user', access: 'own', description: 'Update own user profile' },
-  { action: 'update', entity: 'user', access: 'any', description: 'Update any user profile' },
-  { action: 'delete', entity: 'user', access: 'any', description: 'Delete user accounts' },
+  {
+    action: 'create',
+    entity: 'user',
+    access: 'any',
+    description: 'Create new users',
+  },
+  {
+    action: 'read',
+    entity: 'user',
+    access: 'own',
+    description: 'Read own user profile',
+  },
+  {
+    action: 'read',
+    entity: 'user',
+    access: 'any',
+    description: 'Read all user profiles',
+  },
+  {
+    action: 'update',
+    entity: 'user',
+    access: 'own',
+    description: 'Update own user profile',
+  },
+  {
+    action: 'update',
+    entity: 'user',
+    access: 'any',
+    description: 'Update any user profile',
+  },
+  {
+    action: 'delete',
+    entity: 'user',
+    access: 'any',
+    description: 'Delete user accounts',
+  },
 
   // Audit log permissions
-  { action: 'read', entity: 'audit-log', access: 'any', description: 'Read audit logs' },
+  {
+    action: 'read',
+    entity: 'audit-log',
+    access: 'any',
+    description: 'Read audit logs',
+  },
 ];
 
 /**
@@ -255,7 +335,7 @@ export class DatabaseSeederService {
   async displayPermissionStructure(): Promise<void> {
     const roles = await this.roleRepo.find({
       relations: ['permissions'],
-      order: { name: 'ASC' }
+      order: { name: 'ASC' },
     });
 
     this.logger.log('=== Current Permission Structure ===');
@@ -268,9 +348,15 @@ export class DatabaseSeederService {
         this.logger.log('  - No permissions assigned');
       } else {
         role.permissions
-          .sort((a, b) => `${a.action}:${a.entity}:${a.access}`.localeCompare(`${b.action}:${b.entity}:${b.access}`))
-          .forEach(permission => {
-            this.logger.log(`  - ${permission.action}:${permission.entity}:${permission.access} (${permission.description})`);
+          .sort((a, b) =>
+            `${a.action}:${a.entity}:${a.access}`.localeCompare(
+              `${b.action}:${b.entity}:${b.access}`
+            )
+          )
+          .forEach((permission) => {
+            this.logger.log(
+              `  - ${permission.action}:${permission.entity}:${permission.access} (${permission.description})`
+            );
           });
       }
     }
@@ -282,6 +368,7 @@ export class DatabaseSeederService {
     await this.seedOrganizations();
     await this.seedPermissions();
     await this.seedUsers();
+    await this.displayPermissionStructure();
     this.logger.log('All seeding completed successfully');
   }
 }
