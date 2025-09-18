@@ -4,9 +4,17 @@ import {
   Post,
   UseGuards,
   SerializeOptions,
+  Get,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { UserDto } from '@task-management-system/data';
 import { AuthBodyDto, AuthResponseDto } from '@task-management-system/auth';
 import { AuthService } from './auth.service';
@@ -34,5 +42,25 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async login(@Request() req: AuthenticatedRequest): Promise<AuthResponseDto> {
     return this.authService.login(req.user);
+  }
+
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Post('logout')
+  @ApiOperation({ summary: 'User logout' })
+  @ApiResponse({ status: 204, description: 'Logout successful' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiBearerAuth('JWT-auth')
+  async logout(@Request() req: AuthenticatedRequest): Promise<void> {
+    const user = req.user;
+    await this.authService.logout(user.id);
+  }
+
+  @ApiBearerAuth('JWT-auth')
+  @Get('self')
+  @ApiOperation({ summary: 'Get current user' })
+  @ApiResponse({ status: 200, description: 'Current user info', type: UserDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async self(@Request() req: AuthenticatedRequest): Promise<UserDto> {
+    return req.user;
   }
 }

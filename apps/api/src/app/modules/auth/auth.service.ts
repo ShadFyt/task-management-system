@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { UserService } from '../users/user.service';
 import { UserDto } from '@task-management-system/data';
 import * as bcrypt from 'bcrypt';
@@ -58,6 +58,18 @@ export class AuthService {
       refresh_token: refreshToken,
       user,
     };
+  }
+
+  async logout(userId: string) {
+    try {
+      const result = await this.tokenRepository.delete({ userId });
+      this.logger.log(`Deleted ${result.affected} tokens for user: ${userId}`);
+    } catch (error) {
+      this.logger.error(`Failed to delete tokens for user ${userId}:`, error);
+      throw new BadRequestException(
+        `Failed to delete tokens for user ${userId}`
+      );
+    }
   }
 
   /**
