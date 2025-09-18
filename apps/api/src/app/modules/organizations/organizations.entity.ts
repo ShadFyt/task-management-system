@@ -10,6 +10,7 @@ import {
   Index,
 } from 'typeorm';
 import { User } from '../users/users.entity';
+import { Task } from '../tasks/tasks.entity';
 
 @Entity('organizations')
 @Index(['name', 'parentId'], { unique: true })
@@ -33,6 +34,9 @@ export class Organization {
 
   @OneToMany(() => Organization, (org) => org.parent)
   children!: Organization[];
+
+  @OneToMany(() => Task, (task) => task.organization)
+  tasks: Task[];
 
   @OneToMany(() => User, (user) => user.organization)
   users: User[];

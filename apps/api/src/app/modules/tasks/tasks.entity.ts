@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -12,6 +13,7 @@ import {
   TaskType,
 } from '@task-management-system/data';
 import { User } from '../users/users.entity';
+import { Organization } from '../organizations/organizations.entity';
 
 @Entity('tasks')
 export class Task {
@@ -39,6 +41,20 @@ export class Task {
   @UpdateDateColumn()
   updatedAt: Date;
 
+  @Column('uuid', { nullable: true })
+  organizationId: string;
+
+  @ManyToOne(() => Organization, (org) => org.tasks, {
+    nullable: true,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'organizationId' })
+  organization: Organization;
+
+  @Column('uuid', { nullable: true })
+  userId: string;
+
   @ManyToOne(() => User, (user) => user.tasks, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'userId' })
   user: User;
 }
