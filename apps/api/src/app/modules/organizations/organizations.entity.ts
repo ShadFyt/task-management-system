@@ -9,6 +9,7 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
+import { User } from '../users/users.entity';
 
 @Entity('organizations')
 @Index(['name', 'parentId'], { unique: true })
