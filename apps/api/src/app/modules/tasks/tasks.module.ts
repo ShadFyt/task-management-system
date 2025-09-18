@@ -4,6 +4,6 @@ import { Task } from './tasks.entity';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Task])],
-  exports: [TypeOrmModule],
+  exports: [],
 })
 export class TasksModule {}

@@ -4,6 +4,6 @@ import { Organization } from './organizations.entity';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Organization])],
-  exports: [TypeOrmModule],
+  exports: [],
 })
 export class OrganizationsModule {}
