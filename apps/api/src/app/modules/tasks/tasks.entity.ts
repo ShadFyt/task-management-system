@@ -24,13 +24,13 @@ export class Task {
   @Column({ default: '' })
   content: string;
 
-  @Column()
+  @Column({ type: 'text' })
   status: TaskStatus;
 
-  @Column()
+  @Column({ type: 'text' })
   priority: TaskPriority;
 
-  @Column()
+  @Column({ type: 'text' })
   type: TaskType;
 
   @CreateDateColumn()

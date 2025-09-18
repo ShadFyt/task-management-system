@@ -20,13 +20,13 @@ export class Permission {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ type: 'text' })
   action: PermissionAction;
 
-  @Column()
+  @Column({ type: 'text' })
   entity: PermissionEntity;
 
-  @Column()
+  @Column({ type: 'text' })
   access: PermissionAccess;
 
   @Column({ default: '' })
