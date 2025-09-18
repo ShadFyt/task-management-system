@@ -9,5 +9,5 @@ import { NxWelcome } from './nx-welcome';
   styleUrl: './app.css',
 })
 export class App {
-  protected title = 'task-management-system';
+  protected title = 'dashboard';
 }

@@ -1,26 +1,26 @@
 {
-  "name": "task-management-system",
+  "name": "dashboard",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "prefix": "app",
-  "sourceRoot": "apps/task-management-system/src",
+  "sourceRoot": "apps/dashboard/src",
   "tags": [],
   "targets": {
     "build": {
       "executor": "@angular/build:application",
       "outputs": ["{options.outputPath}"],
       "options": {
-        "outputPath": "dist/apps/task-management-system",
-        "browser": "apps/task-management-system/src/main.ts",
+        "outputPath": "dist/apps/dashboard",
+        "browser": "apps/dashboard/src/main.ts",
         "polyfills": ["zone.js"],
-        "tsConfig": "apps/task-management-system/tsconfig.app.json",
+        "tsConfig": "apps/dashboard/tsconfig.app.json",
         "assets": [
           {
             "glob": "**/*",
-            "input": "apps/task-management-system/public"
+            "input": "apps/dashboard/public"
           }
         ],
-        "styles": ["apps/task-management-system/src/styles.css"]
+        "styles": ["apps/dashboard/src/styles.css"]
       },
       "configurations": {
         "production": {
@@ -51,10 +51,10 @@
       "executor": "@angular/build:dev-server",
       "configurations": {
         "production": {
-          "buildTarget": "task-management-system:build:production"
+          "buildTarget": "dashboard:build:production"
         },
         "development": {
-          "buildTarget": "task-management-system:build:development"
+          "buildTarget": "dashboard:build:development"
         }
       },
       "defaultConfiguration": "development"
@@ -62,7 +62,7 @@
     "extract-i18n": {
       "executor": "@angular/build:extract-i18n",
       "options": {
-        "buildTarget": "task-management-system:build"
+        "buildTarget": "dashboard:build"
       }
     },
     "lint": {
@@ -72,17 +72,17 @@
       "executor": "@nx/jest:jest",
       "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
       "options": {
-        "jestConfig": "apps/task-management-system/jest.config.ts",
-        "tsConfig": "apps/task-management-system/tsconfig.spec.json"
+        "jestConfig": "apps/dashboard/jest.config.ts",
+        "tsConfig": "apps/dashboard/tsconfig.spec.json"
       }
     },
     "serve-static": {
       "continuous": true,
       "executor": "@nx/web:file-server",
       "options": {
-        "buildTarget": "task-management-system:build",
+        "buildTarget": "dashboard:build",
         "port": 4200,
-        "staticFilePath": "dist/apps/task-management-system/browser",
+        "staticFilePath": "dist/apps/dashboard/browser",
         "spa": true
       }
     }
