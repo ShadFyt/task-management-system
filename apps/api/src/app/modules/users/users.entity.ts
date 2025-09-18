@@ -5,9 +5,9 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
-  JoinColumn,
 } from 'typeorm';
 import { Role } from '../roles/roles.entity';
+import { Organization } from '../organizations/organizations.entity';
 
 @Entity('users')
 export class User {
@@ -25,6 +25,16 @@ export class User {
 
   @ManyToOne(() => Role, (role) => role.users)
   role: Role;
+
+  @Column('uuid')
+  organizationId: string;
+
+  @ManyToOne(() => Organization, (org) => org.users, {
+    onDelete: 'CASCADE',
+    nullable: false,
+  })
+  @JoinColumn({ name: 'organizationId' })
+  organization: Organization;
 
   @Column({ default: true })
   isActive: boolean;
