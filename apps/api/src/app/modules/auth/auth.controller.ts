@@ -8,7 +8,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { UserDto } from '@task-management-system/data';
-import { AuthBodyDto } from '@task-management-system/auth';
+import { AuthBodyDto, AuthResponseDto } from '@task-management-system/auth';
 import { AuthService } from './auth.service';
 
 interface AuthenticatedRequest extends Request {
@@ -18,14 +18,18 @@ interface AuthenticatedRequest extends Request {
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
-  @SerializeOptions({ type: UserDto })
+  @SerializeOptions({ type: AuthResponseDto })
   @UseGuards(AuthGuard('local'))
   @Post('login')
   @ApiOperation({ summary: 'User login' })
   @ApiBody({ type: AuthBodyDto })
-  @ApiResponse({ status: 200, description: 'Login successful', type: UserDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Login successful',
+    type: AuthResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async login(@Request() req: AuthenticatedRequest): Promise<UserDto> {
-    return req.user;
+  async login(@Request() req: AuthenticatedRequest): Promise<AuthResponseDto> {
+    return this.authService.login(req.user);
   }
 }
