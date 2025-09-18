@@ -15,8 +15,8 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@task-management-system/auth": ["auth/src/index.ts"],
-      "@task-management-system/data": ["data/src/index.ts"]
+      "@task-management-system/auth": ["libs/auth/src/index.ts"],
+      "@task-management-system/data": ["libs/data/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
