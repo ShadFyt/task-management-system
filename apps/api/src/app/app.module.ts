@@ -11,6 +11,8 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
 import { TasksModule } from './modules/tasks/tasks.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CoreModule } from './core/core.module';
+import { APP_GUARD } from '@nestjs/core';
+import { GlobalJwtAuthGuard } from './core/global-jwt-auth.guard';
 
 @Module({
   imports: [
@@ -41,6 +43,12 @@ import { CoreModule } from './core/core.module';
     TasksModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: GlobalJwtAuthGuard,
+    },
+  ],
 })
 export class AppModule {}

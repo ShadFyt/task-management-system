@@ -10,6 +10,7 @@ import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { UserDto } from '@task-management-system/data';
 import { AuthBodyDto, AuthResponseDto } from '@task-management-system/auth';
 import { AuthService } from './auth.service';
+import { Public } from '../../core/public.decorator';
 
 interface AuthenticatedRequest extends Request {
   user: UserDto;
@@ -18,6 +19,8 @@ interface AuthenticatedRequest extends Request {
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
+
+  @Public()
   @SerializeOptions({ type: AuthResponseDto })
   @UseGuards(AuthGuard('local'))
   @Post('login')
