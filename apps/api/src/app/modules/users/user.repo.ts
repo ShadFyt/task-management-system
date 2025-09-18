@@ -15,14 +15,9 @@ export class UserRepo {
   }
 
   async findOneById(id: string): Promise<User | null> {
-    return this.repo.findOneBy({ id });
-  }
-
-  async findOneByIdOrThrow(id: string): Promise<User> {
-    const user = await this.findOneById(id);
-    if (!user) {
-      throw new BadRequestException(`User with id ${id} not found`);
-    }
-    return user;
+    return this.repo.findOne({
+      where: { id },
+      relations: ['role'],
+    });
   }
 }

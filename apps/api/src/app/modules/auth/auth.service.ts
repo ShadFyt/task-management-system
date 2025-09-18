@@ -32,8 +32,15 @@ export class AuthService {
 
   async login(user: UserDto) {
     const payload = { sub: user.id, email: user.email };
+    const foundUser = await this.userService.findOneByIdOrThrow(user.id);
+    const jwtPayload = {
+      sub: foundUser.id,
+      email: foundUser.email,
+      role: foundUser.role,
+      organizationId: foundUser.organizationId,
+    };
 
-    const accessToken = this.jwtService.sign(payload, {
+    const accessToken = this.jwtService.sign(jwtPayload, {
       expiresIn: '15m',
     });
 
