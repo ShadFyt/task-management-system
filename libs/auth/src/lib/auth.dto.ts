@@ -1,18 +1,7 @@
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
-
-export class UserDto {
-  @Expose()
-  @IsString()
-  id: string;
-  @Expose()
-  @IsEmail()
-  email: string;
-  @Expose()
-  @IsString()
-  name: string;
-}
+import { UserDto } from '@task-management-system/data';
 
 export class AuthBodyDto {
   @ApiProperty()
