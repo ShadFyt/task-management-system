@@ -15,7 +15,10 @@ import { Organization } from '../organizations/organizations.entity';
 import { User } from '../users/users.entity';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { CreateAuditLogData } from '../audit-logs/audit-log.types';
-import { canUserAccessTask } from '../../common/helpers/rbac.repo-helpers';
+import {
+  canUserAccessTask,
+  checkPermission,
+} from '../../common/helpers/rbac.repo-helpers';
 
 @Injectable()
 export class TasksService {
@@ -72,7 +75,7 @@ export class TasksService {
     };
 
     if (dto.type === 'work') {
-      if (!['admin', 'owner'].includes(role.name)) {
+      if (!checkPermission(role, 'task', 'create', 'any')) {
         this.logger.warn(
           `User ${sub} (${role.name}) is not authorized to create work tasks`
         );
@@ -152,7 +155,7 @@ export class TasksService {
 
     // Additional validation for work tasks
     if (dto.type === 'work' && task.type !== 'work') {
-      if (!['admin', 'owner'].includes(authUser.role.name)) {
+      if (!checkPermission(authUser.role, 'task', 'update', 'any')) {
         this.logger.warn(
           `User ${sub} (${authUser.role.name}) attempted to change task to work type`
         );

@@ -17,7 +17,7 @@ export class UserRepo {
   async findOneById(id: string): Promise<User | null> {
     return this.repo.findOne({
       where: { id },
-      relations: ['role'],
+      relations: ['role', 'role.permissions'],
     });
   }
 }

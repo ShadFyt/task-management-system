@@ -5,6 +5,12 @@ import {
   PermissionString,
 } from '@task-management-system/auth';
 import { Task } from '../../modules/tasks/tasks.entity';
+import { Role } from '../../modules/roles/roles.entity';
+import {
+  PermissionAccess,
+  PermissionAction,
+  PermissionEntity,
+} from '@task-management-system/data';
 
 /**
  * Check if a user has a specific role by name
@@ -171,12 +177,7 @@ export async function canUserAccessTask(
 
   // Should hasAnyPermission be allowed for personal tasks? maybe we should prevent this
   // If permission includes "any" user is admin or owner
-  const hasAnyPermission = user.role.permissions.some(
-    (permission) =>
-      permission.entity === entity &&
-      permission.action === action &&
-      permission.access.includes('any')
-  );
+  const hasAnyPermission = checkPermission(user.role, entity, action, 'any');
 
   // Check if user permission includes "any" access and user is in same organization scope
   if (hasAnyPermission) {
@@ -191,3 +192,17 @@ export async function canUserAccessTask(
 
   return false;
 }
+
+export const checkPermission = (
+  role: Role,
+  entity: PermissionEntity,
+  action: PermissionAction,
+  access: PermissionAccess
+) => {
+  return role.permissions.some(
+    (permission) =>
+      permission.entity === entity &&
+      permission.action === action &&
+      permission.access.includes(access)
+  );
+};
