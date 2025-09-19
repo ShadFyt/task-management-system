@@ -60,6 +60,7 @@ export class CreateTaskDto {
 }
 
 export class UpdateTaskDto extends PartialType(CreateTaskDto) {
+  @ApiProperty({ example: 'todo' })
   @IsOptional()
   @IsString()
   status?: TaskStatus;

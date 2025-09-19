@@ -32,9 +32,45 @@ export class TasksRepo {
     }
   }
 
-  // async updateTask(id: string, taskData: Partial<Task>): Promise<Task> {}
+  /**
+   * Find a task by ID with user and organization relations
+   * @param id Task ID
+   * @returns Task with relations or null if not found
+   */
+  async findById(id: string): Promise<Task | null> {
+    return this.repo.findOne({
+      where: { id },
+      relations: ['user', 'organization'],
+    });
+  }
 
+  /**
+   * Update a task by ID
+   * @param id Task ID
+   * @param taskData Partial task data to update
+   * @returns Updated task
+   */
+  async updateTask(id: string, taskData: Partial<Task>): Promise<Task> {
+    try {
+      await this.repo.update(id, taskData);
+      const updatedTask = await this.findById(id);
+      if (!updatedTask) {
+        throw new BadRequestException('Failed to retrieve updated task');
+      }
+      return updatedTask;
+    } catch (error) {
+      throw new BadRequestException('Failed to update task');
+    }
+  }
+
+  /**
+   * Delete a task by ID
+   * @param id Task ID
+   */
   async deleteTask(id: string): Promise<void> {
-    await this.repo.delete(id);
+    const result = await this.repo.delete(id);
+    if (result.affected === 0) {
+      throw new BadRequestException('Task not found or already deleted');
+    }
   }
 }
