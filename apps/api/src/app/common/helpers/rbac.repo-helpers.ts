@@ -81,51 +81,6 @@ export async function userHasPermissionByString(
 }
 
 /**
- * Get all permissions for a user
- * @param userRepo - User repository
- * @param userId - User ID
- * @returns Promise<string[]> - Array of permission strings
- */
-export async function getUserPermissions(
-  userRepo: Repository<User>,
-  userId: string
-): Promise<string[]> {
-  const user = await userRepo.findOne({
-    where: { id: userId },
-    relations: ['role', 'role.permissions'],
-  });
-
-  if (!user || !user.role || !user.role.permissions) {
-    return [];
-  }
-
-  // Convert permission entities to permission strings
-  return user.role.permissions.map(
-    (permission) =>
-      `${permission.action}:${permission.entity}:${permission.access}` as PermissionString
-  );
-}
-
-/**
- * Check if a user has any of the specified permissions
- * @param userRepo - User repository
- * @param userId - User ID to check
- * @param permissionStrings - Array of permission strings to check
- * @returns Promise<boolean> - True if user has any of the permissions
- */
-export async function userHasAnyPermission(
-  userRepo: Repository<User>,
-  userId: string,
-  permissionStrings: PermissionString[]
-): Promise<boolean> {
-  const userPermissions = await getUserPermissions(userRepo, userId);
-
-  return permissionStrings.some((permission) =>
-    userPermissions.includes(permission)
-  );
-}
-
-/**
  * Check if a user can access a task based on ownership and organization scope
  * @param userRepo - User repository
  * @param userId - User ID
