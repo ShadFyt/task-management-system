@@ -15,11 +15,6 @@ import { TasksService } from './tasks.service';
 import { AuthUser } from '../auth/auth.type';
 import { User } from '../../common/decorators/user.decorator';
 import {
-  CreateTaskDto,
-  TaskDto,
-  UpdateTaskDto,
-} from '@task-management-system/data';
-import {
   ApiBearerAuth,
   ApiOperation,
   ApiResponse,
@@ -27,6 +22,7 @@ import {
 } from '@nestjs/swagger';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/rbac.decorators';
+import { CreateTaskDto, TaskDto, UpdateTaskDto } from './tasks.dto';
 
 @ApiTags('tasks')
 @Controller('tasks')
@@ -54,7 +50,7 @@ export class TasksController {
    */
   @Post()
   @UseGuards(PermissionGuard)
-  @RequirePermission('create:task:own,any')
+  @RequirePermission('create:task:own')
   @SerializeOptions({ type: TaskDto })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new task' })

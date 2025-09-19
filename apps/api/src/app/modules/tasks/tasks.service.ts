@@ -6,7 +6,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { TasksRepo } from './tasks.repo';
-import { CreateTaskDto, UpdateTaskDto } from '@task-management-system/data';
 import { Task } from './tasks.entity';
 import { AuthUser } from '../auth/auth.type';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -15,10 +14,8 @@ import { Organization } from '../organizations/organizations.entity';
 import { User } from '../users/users.entity';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { CreateAuditLogData } from '../audit-logs/audit-log.types';
-import {
-  canUserAccessTask,
-  checkPermission,
-} from '../../common/helpers/rbac.repo-helpers';
+import { canUserAccessTask } from '../../common/helpers/rbac.repo-helpers';
+import { CreateTaskDto, UpdateTaskDto } from './tasks.dto';
 
 @Injectable()
 export class TasksService {
@@ -54,6 +51,40 @@ export class TasksService {
   }
 
   /**
+   * Finds a specific task by ID with permission validation
+   * @param authUser - The authenticated user object
+   * @param taskId - The ID of the task to find
+   * @returns Promise<Task> - The task if found and accessible
+   */
+  async findTaskById(authUser: AuthUser, taskId: string): Promise<Task> {
+    const { sub } = authUser;
+
+    // Find the task with relations
+    const task = await this.repo.findById(taskId);
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+
+    // Check if user can access this task
+    const canAccess = await canUserAccessTask(
+      this.userRepo,
+      sub,
+      task,
+      'read:task:own,any'
+    );
+    if (!canAccess) {
+      this.logger.warn(
+        `User ${sub} attempted to access task ${taskId} without permission`
+      );
+      throw new ForbiddenException(
+        'You do not have permission to access this task'
+      );
+    }
+
+    return task;
+  }
+
+  /**
    * Creates a new task for the authenticated user within their organization.
    * Applies permission checking based on task type:
    * - Personal tasks: Anyone can create (always owned by creator)
@@ -75,7 +106,7 @@ export class TasksService {
     };
 
     if (dto.type === 'work') {
-      if (!checkPermission(role, 'task', 'create', 'any')) {
+      if (!['admin', 'owner'].includes(role.name)) {
         this.logger.warn(
           `User ${sub} (${role.name}) is not authorized to create work tasks`
         );
@@ -155,7 +186,7 @@ export class TasksService {
 
     // Additional validation for work tasks
     if (dto.type === 'work' && task.type !== 'work') {
-      if (!checkPermission(authUser.role, 'task', 'update', 'any')) {
+      if (!['admin', 'owner'].includes(authUser.role.name)) {
         this.logger.warn(
           `User ${sub} (${authUser.role.name}) attempted to change task to work type`
         );
@@ -206,7 +237,7 @@ export class TasksService {
       this.userRepo,
       sub,
       task,
-      'delete:task:own'
+      'delete:task:own,any'
     );
     if (!canAccess) {
       this.logger.warn(

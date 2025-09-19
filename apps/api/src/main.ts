@@ -17,6 +17,19 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['log', 'error', 'warn', 'debug', 'verbose'],
   });
+
+  // Enable CORS for frontend
+  app.enableCors({
+    origin: [
+      'http://localhost:4200',
+      'http://127.0.0.1:4200',
+      'http://localhost:3000',
+      'http://127.0.0.1:3000'
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    credentials: true,
+  });
   if (process.env.NODE_ENV === 'development') {
     const seeder = app.get(DatabaseSeederService);
     await seeder.seedAll();

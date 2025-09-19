@@ -15,10 +15,10 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { UserDto } from '@task-management-system/data';
-import { AuthBodyDto, AuthResponseDto } from '@task-management-system/auth';
 import { AuthService } from './auth.service';
 import { Public } from '../../core/public.decorator';
+import { UserDto } from '../users/users.dto';
+import { AuthBodyDto, AuthResponseDto } from './auth.dto';
 
 interface AuthenticatedRequest extends Request {
   user: UserDto;
