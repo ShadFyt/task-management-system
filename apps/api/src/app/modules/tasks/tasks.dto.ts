@@ -1,5 +1,9 @@
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { TaskPriority, TaskStatus, TaskType } from '../interfaces';
+import {
+  TaskPriority,
+  TaskStatus,
+  TaskType,
+} from '@task-management-system/data';
 import { PartialType } from '@nestjs/mapped-types';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
