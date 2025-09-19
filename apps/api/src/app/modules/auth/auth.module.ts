@@ -15,8 +15,8 @@ import { JwtModule } from '@nestjs/jwt';
     UsersModule,
     PassportModule,
     JwtModule.register({
-      secret: 'will-be-changed-later',
-      signOptions: { expiresIn: '60s' },
+      secret: 'a-string-secret-at-least-256-bits-long',
+      signOptions: { expiresIn: '1h' },
     }),
   ],
   providers: [AuthService, LocalStrategy, JwtStrategy],

@@ -8,6 +8,7 @@ import {
   Index,
 } from 'typeorm';
 import { Organization } from '../organizations/organizations.entity';
+import { CreateAuditLogData } from './audit-log.types';
 
 @Entity('audit_logs')
 @Index(['resourceType', 'resourceId'])
@@ -28,30 +29,24 @@ export class AuditLog {
   @JoinColumn({ name: 'organizationId' })
   organization: Organization;
 
-  @Column()
-  action: 'login' | 'logout' | 'create' | 'update' | 'delete';
+  @Column({ type: 'text' })
+  action: CreateAuditLogData['action'];
 
-  @Column()
-  resourceType: 'user' | 'organization' | 'task';
+  @Column({ type: 'text' })
+  resourceType: CreateAuditLogData['resourceType'];
 
   @Column({ nullable: true })
   resourceId: string | null;
 
-  @Column()
-  outcome: 'success' | 'failure';
+  @Column({ type: 'text' })
+  outcome: CreateAuditLogData['outcome'];
 
   @Column({ nullable: true })
   route?: string | null;
 
-  @Column({ nullable: true })
-  userAgent?: string | null;
+  @Column({ type: 'text', nullable: true })
+  metadata?: string | null;
 
-  @Column({ nullable: true })
-  requestId?: string | null;
-
-  @Column({ type: 'jsonb', nullable: true })
-  metadata?: Record<string, any> | null;
-
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn()
   at: Date;
 }

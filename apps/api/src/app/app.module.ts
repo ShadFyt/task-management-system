@@ -13,6 +13,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CoreModule } from './core/core.module';
 import { APP_GUARD } from '@nestjs/core';
 import { GlobalJwtAuthGuard } from './core/global-jwt-auth.guard';
+import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { GlobalJwtAuthGuard } from './core/global-jwt-auth.guard';
     UsersModule,
     OrganizationsModule,
     TasksModule,
+    AuditLogsModule
   ],
   controllers: [AppController],
   providers: [

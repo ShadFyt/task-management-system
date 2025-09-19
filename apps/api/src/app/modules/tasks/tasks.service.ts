@@ -6,6 +6,8 @@ import { AuthUser } from '../auth/auth.type';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Organization } from '../organizations/organizations.entity';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { CreateAuditLogData } from '../audit-logs/audit-log.types';
 
 @Injectable()
 export class TasksService {
@@ -13,7 +15,8 @@ export class TasksService {
   constructor(
     private readonly repo: TasksRepo,
     @InjectRepository(Organization)
-    private readonly orgRepo: Repository<Organization>
+    private readonly orgRepo: Repository<Organization>,
+    private readonly auditLogsService: AuditLogsService
   ) {}
 
   /**
@@ -46,19 +49,42 @@ export class TasksService {
   async createTask(authUser: AuthUser, dto: CreateTaskDto): Promise<Task> {
     const { sub, organizationId, role } = authUser;
 
+    const baseAuditLogData: CreateAuditLogData = {
+      action: 'create',
+      resourceType: 'task',
+      organizationId,
+      route: '/tasks',
+      metadata: dto,
+      actorUserId: sub,
+      actorEmail: authUser.email,
+      outcome: 'success',
+      resourceId: '',
+    };
+
     if (dto.type === 'work') {
       if (!['admin', 'owner'].includes(role.name)) {
+        this.logger.warn(
+          `User ${sub} (${role.name}) is not authorized to create work tasks`
+        );
+        baseAuditLogData.outcome = 'failure';
+        this.auditLogsService.createAuditLog(baseAuditLogData);
+
         throw new ForbiddenException(
           'Only administrators and owners can create work tasks'
         );
       }
     }
 
-    return this.repo.createTask({
+    const task = await this.repo.createTask({
       ...dto,
       userId: sub,
       organizationId,
       status: 'todo',
     });
+
+    baseAuditLogData.resourceId = task.id;
+    this.auditLogsService.createAuditLog(baseAuditLogData);
+
+    return task;
   }
 }
