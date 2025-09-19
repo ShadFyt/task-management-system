@@ -26,7 +26,7 @@ export const parsePermissionString = (p: PermissionString) => {
   const [action, entity, accessPart] = p.split(':') as [
     PermissionAction,
     PermissionEntity,
-    string?
+    PermissionAccess?
   ];
   const access = accessPart
     ? (accessPart.split(',').filter(Boolean) as PermissionAccess[])

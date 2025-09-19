@@ -157,7 +157,7 @@ export async function canUserAccessTask(
     return false;
   }
 
-  const { access } = parsePermissionString(requiredPermission);
+  const { access, entity, action } = parsePermissionString(requiredPermission);
 
   // If no access is specified, allow access (permission without scope)
   if (!access || access.length === 0) {
@@ -169,8 +169,17 @@ export async function canUserAccessTask(
     return true;
   }
 
-  // Check if permission includes "any" access and user is in same organization scope
-  if (access.includes('any')) {
+  // Should hasAnyPermission be allowed for personal tasks? maybe we should prevent this
+  // If permission includes "any" user is admin or owner
+  const hasAnyPermission = user.role.permissions.some(
+    (permission) =>
+      permission.entity === entity &&
+      permission.action === action &&
+      permission.access.includes('any')
+  );
+
+  // Check if user permission includes "any" access and user is in same organization scope
+  if (hasAnyPermission) {
     // Get user's organization and its children
     const userOrgIds = [user.organization.id];
     if (user.organization.children) {
