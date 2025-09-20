@@ -72,14 +72,10 @@ import { LoginCredentials } from '@task-management-system/auth';
             <button
               type="submit"
               [disabled]="loading() || loginForm.invalid"
-              class="w-full border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
+              class="btn-primary w-full"
             >
               @if (loading()) {
-              <div
-                class="animate-spin inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-2"
-                role="status"
-                aria-label="loading"
-              >
+              <div class="btn-primary" role="status" aria-label="loading">
                 <span class="sr-only">Loading...</span>
               </div>
               Signing in... } @else { Sign In }
