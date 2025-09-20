@@ -44,3 +44,9 @@ Thumbs.db
 .github/instructions/nx.instructions.md
 
 .angular
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+apps/api/data/
