@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -8,7 +9,6 @@ import {
   Param,
   Post,
   Put,
-  SerializeOptions,
   UseGuards,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
@@ -22,7 +22,17 @@ import {
 } from '@nestjs/swagger';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/rbac.decorators';
-import { CreateTaskDto, TaskDto, UpdateTaskDto } from './tasks.dto';
+import { createZodDto } from 'nestjs-zod';
+import {
+  createTaskSchema,
+  Task,
+  taskSchema,
+  updateTaskSchema,
+} from '@task-management-system/data';
+
+class CreateTaskDto extends createZodDto(createTaskSchema) {}
+class TaskDto extends createZodDto(taskSchema) {}
+class UpdateTaskDto extends createZodDto(updateTaskSchema) {}
 
 @ApiTags('tasks')
 @Controller('tasks')
@@ -32,12 +42,12 @@ export class TasksController {
   @Get()
   @UseGuards(PermissionGuard)
   @RequirePermission('read:task:own,any')
-  @SerializeOptions({ type: TaskDto })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get all tasks accessible to the user' })
   @ApiResponse({ status: 200, description: 'List of tasks', type: [TaskDto] })
-  async findAllByUserOrg(@User() user: AuthUser): Promise<TaskDto[]> {
-    return this.service.findAllByUserOrg(user);
+  async findAllByUserOrg(@User() user: AuthUser): Promise<Task[]> {
+    const tasks = await this.service.findAllByUserOrg(user);
+    return taskSchema.array().parse(tasks);
   }
 
   /**
@@ -51,7 +61,6 @@ export class TasksController {
   @Post()
   @UseGuards(PermissionGuard)
   @RequirePermission('create:task:own')
-  @SerializeOptions({ type: TaskDto })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new task' })
   @ApiResponse({
@@ -63,8 +72,9 @@ export class TasksController {
   async createTask(
     @User() user: AuthUser,
     @Body() dto: CreateTaskDto
-  ): Promise<TaskDto> {
-    return this.service.createTask(user, dto);
+  ): Promise<Task> {
+    const task = await this.service.createTask(user, dto);
+    return taskSchema.parse(task);
   }
 
   /**
@@ -77,7 +87,6 @@ export class TasksController {
   @Put(':id')
   @UseGuards(PermissionGuard)
   @RequirePermission('update:task:own,any')
-  @SerializeOptions({ type: TaskDto })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update an existing task' })
   @ApiResponse({
@@ -91,8 +100,9 @@ export class TasksController {
     @User() user: AuthUser,
     @Param('id') taskId: string,
     @Body() dto: UpdateTaskDto
-  ): Promise<TaskDto> {
-    return this.service.updateTask(user, taskId, dto);
+  ): Promise<Task> {
+    const task = await this.service.updateTask(user, taskId, dto);
+    return taskSchema.parse(task);
   }
 
   /**
@@ -102,7 +112,7 @@ export class TasksController {
    */
   @Delete(':id')
   @UseGuards(PermissionGuard)
-  @RequirePermission('delete:task:own,any')
+  @RequirePermission('delete:task:own')
   @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a task' })

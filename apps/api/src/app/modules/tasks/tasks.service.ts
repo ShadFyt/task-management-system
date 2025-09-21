@@ -15,7 +15,7 @@ import { User } from '../users/users.entity';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { CreateAuditLogData } from '../audit-logs/audit-log.types';
 import { canUserAccessTask } from '../../common/helpers/rbac.repo-helpers';
-import { CreateTaskDto, UpdateTaskDto } from './tasks.dto';
+import { CreateTask, UpdateTask } from '@task-management-system/data';
 
 @Injectable()
 export class TasksService {
@@ -90,7 +90,7 @@ export class TasksService {
    * - Personal tasks: Anyone can create (always owned by creator)
    * - Work tasks: Only admin/owner roles can create
    */
-  async createTask(authUser: AuthUser, dto: CreateTaskDto): Promise<Task> {
+  async createTask(authUser: AuthUser, dto: CreateTask): Promise<Task> {
     const { sub, organizationId, role } = authUser;
 
     const baseAuditLogData: CreateAuditLogData = {
@@ -142,7 +142,7 @@ export class TasksService {
   async updateTask(
     authUser: AuthUser,
     taskId: string,
-    dto: UpdateTaskDto
+    dto: UpdateTask
   ): Promise<Task> {
     const { sub, organizationId } = authUser;
 

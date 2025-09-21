@@ -166,6 +166,7 @@ const rolePermissionMappings: Record<RoleName, string[]> = {
     'update:user:own',
     'update:task:own',
     'delete:task:own',
+    'create:task:own', // can create personal tasks
   ],
 };
 
