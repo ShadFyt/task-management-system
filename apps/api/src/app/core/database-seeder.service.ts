@@ -191,10 +191,18 @@ export class DatabaseSeederService {
       this.logger.log('Orgs already exist, skipping seed');
       return;
     }
+
     const org = this.orgRepo.create({
       name: 'TurboVets',
     });
-    await this.orgRepo.save(org);
+    const savedOrg = await this.orgRepo.save(org);
+
+    const subOrg = this.orgRepo.create({
+      name: 'Claims',
+      parentId: savedOrg.id,
+    });
+    await this.orgRepo.save(subOrg);
+
     this.logger.log('Org seeded successfully');
   }
 
@@ -224,6 +232,7 @@ export class DatabaseSeederService {
     }
     const adminRole = roles.find((role) => role.name === 'admin');
     const userRole = roles.find((role) => role.name === 'viewer');
+    const ownerRole = roles.find((role) => role.name === 'owner');
 
     if (!adminRole || !userRole) {
       this.logger.error(
@@ -233,11 +242,26 @@ export class DatabaseSeederService {
         'Roles should be preseeded with owner, admin and viewer roles'
       );
     }
-    const org = await this.orgRepo.findOne({ where: { name: 'TurboVets' } });
+    const org = await this.orgRepo.findOne({
+      where: { name: 'TurboVets' },
+      relations: ['children'],
+    });
     if (isNil(org)) throw new Error('Org should be seeded first!');
     const hashedPassword = await this.authService.hashPassword('password');
 
+    const subOrg = org.children[0];
+    if (isNil(subOrg)) {
+      throw new Error('Sub org should be seeded first!');
+    }
+
     const users = [
+      {
+        email: 'owner@example.com',
+        name: 'Owner User',
+        role: ownerRole,
+        password: hashedPassword,
+        organization: org,
+      },
       {
         email: 'admin@example.com',
         name: 'Admin User',
@@ -251,6 +275,13 @@ export class DatabaseSeederService {
         role: userRole,
         password: hashedPassword,
         organization: org,
+      },
+      {
+        email: 'user2@example.com',
+        name: 'Regular User 2',
+        role: userRole,
+        password: hashedPassword,
+        organization: subOrg,
       },
     ];
 
