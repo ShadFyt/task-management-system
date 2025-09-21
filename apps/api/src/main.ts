@@ -55,12 +55,6 @@ async function bootstrap() {
   SwaggerModule.setup('docs', app, cleanupOpenApiDoc(documentFactory()));
   /*  const globalPrefix = 'api';  not sure how to add global prefix as adding api/docs to swagger url doesn't work
   app.setGlobalPrefix(globalPrefix);*/
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-    })
-  );
 
   app.useGlobalInterceptors(
     new ClassSerializerInterceptor(app.get(Reflector), {
