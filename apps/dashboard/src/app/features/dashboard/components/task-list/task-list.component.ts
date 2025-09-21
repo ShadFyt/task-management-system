@@ -13,82 +13,89 @@ import { selectCurrentFilter } from '../../../../store';
   standalone: true,
   imports: [CommonModule, LucideAngularModule],
   template: `
-    <div class="min-h-[200px] p-4">
+    <div class="min-h-[200px] p-3 sm:p-4">
       @if (filteredTasks().length === 0) {
       <div class="text-center text-gray-500 py-8">
-        <p>No tasks in this column</p>
+        <p class="text-sm">No tasks in this column</p>
       </div>
       } @else { @for (task of filteredTasks(); track task.id) {
       <section
-        class="mb-3 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-200 cursor-move"
+        class="mb-3 p-3 sm:p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-200"
       >
-        <div class="flex justify-between items-start mb-2">
-          <h4 class="font-medium text-gray-900 flex-1">{{ task.title }}</h4>
-          <div class="flex space-x-2 ml-2">
-            <span [class]="getPriorityClass(task.priority)">
+        <div
+          class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 space-y-2 sm:space-y-0"
+        >
+          <h4
+            class="font-medium text-gray-900 dark:text-gray-100 text-sm sm:text-base flex-1 pr-2"
+          >
+            {{ task.title }}
+          </h4>
+          <div class="flex space-x-2 flex-shrink-0">
+            <span [class]="getPriorityClass(task.priority)" class="text-xs">
               {{ task.priority }}
             </span>
-            <span [class]="getTypeClass(task.type)">
+            <span [class]="getTypeClass(task.type)" class="text-xs">
               {{ task.type }}
             </span>
           </div>
         </div>
 
         @if (task.content) {
-        <p class="text-sm text-gray-600 mb-3">{{ task.content }}</p>
+        <p
+          class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-3 break-words"
+        >
+          {{ task.content }}
+        </p>
         }
 
-        <div class="flex justify-between items-center text-xs text-gray-500">
-          <div class="flex space-x-2">
-            <div>
-              @if (status() !== 'todo') {
-              <button
-                (click)="changeStatus(task, 'todo')"
-                class="text-yellow-600 hover:text-yellow-800 font-medium"
-                title="Move to To Do"
-              >
-                ← To Do
-              </button>
-              } @if (status() !== 'in-progress') {
-              <button
-                (click)="changeStatus(task, 'in-progress')"
-                class="text-blue-600 hover:text-blue-800 font-medium"
-                title="Move to In Progress"
-              >
-                ↔ Progress
-              </button>
-              } @if (status() !== 'done') {
-              <button
-                (click)="changeStatus(task, 'done')"
-                class="text-green-600 hover:text-green-800 font-medium"
-                title="Move to Done"
-              >
-                → Done
-              </button>
-              }
-            </div>
-
-            @if (canDeleteTask(task)) {
+        <div
+          class="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-2 sm:space-y-0 text-xs"
+        >
+          <div class="flex flex-wrap gap-2">
+            @if (status() !== 'todo') {
             <button
-              (click)="deleteTask(task)"
-              class="text-red-600 hover:text-red-800 font-medium ml-2"
-              title="Delete Task"
-              [disabled]="deleting() === task.id"
+              (click)="changeStatus(task, 'todo')"
+              class="text-yellow-600 hover:text-yellow-800 font-medium px-2 py-1 rounded bg-yellow-50 dark:bg-yellow-900/20"
+              title="Move to To Do"
             >
-              @if (deleting() === task.id) {
-              <lucide-angular
-                class="w-4 h-4"
-                [img]="HourglassIcon"
-              ></lucide-angular>
-              } @else {
-              <lucide-angular
-                class="w-4 h-4"
-                [img]="TrashIcon"
-              ></lucide-angular>
-              }
+              ← To Do
+            </button>
+            } @if (status() !== 'in-progress') {
+            <button
+              (click)="changeStatus(task, 'in-progress')"
+              class="text-blue-600 hover:text-blue-800 font-medium px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/20"
+              title="Move to In Progress"
+            >
+              ↔ Progress
+            </button>
+            } @if (status() !== 'done') {
+            <button
+              (click)="changeStatus(task, 'done')"
+              class="text-green-600 hover:text-green-800 font-medium px-2 py-1 rounded bg-green-50 dark:bg-green-900/20"
+              title="Move to Done"
+            >
+              → Done
             </button>
             }
           </div>
+
+          @if (canDeleteTask(task)) {
+          <button
+            (click)="deleteTask(task)"
+            class="text-red-600 hover:text-red-800 font-medium p-2 rounded bg-red-50 dark:bg-red-900/20 flex items-center justify-center"
+            title="Delete Task"
+            [disabled]="deleting() === task.id"
+          >
+            @if (deleting() === task.id) {
+            <lucide-angular
+              class="w-4 h-4"
+              [img]="HourglassIcon"
+            ></lucide-angular>
+            } @else {
+            <lucide-angular class="w-4 h-4" [img]="TrashIcon"></lucide-angular>
+            }
+          </button>
+          }
         </div>
       </section>
       } }

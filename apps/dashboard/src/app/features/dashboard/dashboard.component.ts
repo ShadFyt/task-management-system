@@ -28,7 +28,72 @@ import { setFilter, selectCurrentFilter, FilterType } from '../../store';
         class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700"
       >
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div class="flex justify-between items-center py-4">
+          <!-- Mobile Layout -->
+          <div class="flex flex-col space-y-4 py-4 md:hidden">
+            <div class="flex justify-between items-center">
+              <div>
+                <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  Task Management
+                </h1>
+                @if (currentUser()) {
+                <p class="text-xs text-gray-600 dark:text-gray-300">
+                  {{ currentUser()?.email }}
+                </p>
+                }
+              </div>
+
+              <div class="flex items-center space-x-2">
+                <button
+                  (click)="themeService.toggleTheme()"
+                  class="p-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors duration-200"
+                  title="Toggle dark mode"
+                >
+                  @if (themeService.isDarkMode()) {
+                  <lucide-angular
+                    class="text-yellow-500 w-4 h-4"
+                    [img]="SunIcon"
+                    name="sun"
+                  ></lucide-angular>
+                  } @else {
+                  <lucide-angular
+                    class="text-gray-500 w-4 h-4"
+                    [img]="MoonIcon"
+                    name="moon"
+                  ></lucide-angular>
+                  }
+                </button>
+                <button (click)="logout()" class="btn-danger text-sm px-3 py-1">
+                  Logout
+                </button>
+              </div>
+            </div>
+
+            <div class="w-full">
+              <app-organization-selector></app-organization-selector>
+            </div>
+
+            <div class="flex space-x-2 overflow-x-auto pb-2">
+              @for (filter of filterOptions; track filter.key) {
+              <button
+                (click)="setFilter(filter.key)"
+                [class]="filterButtonClass(filter.key)"
+                class="whitespace-nowrap"
+              >
+                {{ filter.label }} ({{ getFilterCount(filter.key) }})
+              </button>
+              }
+            </div>
+
+            <button
+              (click)="showTaskForm = !showTaskForm"
+              class="btn-primary w-full"
+            >
+              @if (showTaskForm) { Cancel } @else { + Add Task }
+            </button>
+          </div>
+
+          <!-- Desktop Layout -->
+          <div class="hidden md:flex justify-between items-center py-4">
             <div>
               <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 Task Management
@@ -80,19 +145,19 @@ import { setFilter, selectCurrentFilter, FilterType } from '../../store';
                 ></lucide-angular>
                 }
               </button>
-              <button (click)="logout()" class="btn-danger ">Logout</button>
+              <button (click)="logout()" class="btn-danger">Logout</button>
             </div>
           </div>
         </div>
       </header>
 
-      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         @if (taskService.error()) {
-        <div class="text-error px-4 py-3 rounded mb-6 ">
+        <div class="text-error px-4 py-3 rounded mb-6">
           {{ taskService.error() }}
         </div>
         } @if (showTaskForm) {
-        <div class="mb-8">
+        <div class="mb-6 sm:mb-8">
           <app-task-form
             (taskCreated)="onTaskCreated()"
             (cancelled)="showTaskForm = false"
@@ -106,44 +171,53 @@ import { setFilter, selectCurrentFilter, FilterType } from '../../store';
           <span class="ml-2 text-gray-600">Loading tasks...</span>
         </div>
         } @else {
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+
+        <div
+          class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8"
+        >
           <div class="card">
-            <h3 class="text-header">Total Tasks</h3>
-            <p class="text-3xl font-bold text-primary-600">
+            <h3 class="text-header text-sm sm:text-base">Total Tasks</h3>
+            <p class="text-2xl sm:text-3xl font-bold text-primary-600">
               {{ totalTasks() }}
             </p>
           </div>
           <div class="card">
-            <h3 class="text-header">To Do</h3>
-            <p class="text-3xl font-bold text-yellow-600">
+            <h3 class="text-header text-sm sm:text-base">To Do</h3>
+            <p class="text-2xl sm:text-3xl font-bold text-yellow-600">
               {{ todoTasks().length }}
             </p>
           </div>
           <div class="card">
-            <h3 class="text-header">In Progress</h3>
-            <p class="text-3xl font-bold text-blue-600">
+            <h3 class="text-header text-sm sm:text-base">In Progress</h3>
+            <p class="text-2xl sm:text-3xl font-bold text-blue-600">
               {{ inProgressTasks().length }}
             </p>
           </div>
           <div class="card">
-            <h3 class="text-header">Completed</h3>
-            <p class="text-3xl font-bold text-green-600">
+            <h3 class="text-header text-sm sm:text-base">Completed</h3>
+            <p class="text-2xl sm:text-3xl font-bold text-green-600">
               {{ doneTasks().length }}
             </p>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="space-y-6 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-6">
           <div class="task-column">
-            <div class="px-6 py-4 border-b border-gray-200">
-              <h3 class="text-header">To Do ({{ todoTasks().length }})</h3>
+            <div
+              class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700"
+            >
+              <h3 class="text-header text-sm sm:text-base">
+                To Do ({{ todoTasks().length }})
+              </h3>
             </div>
             <app-task-list status="todo" />
           </div>
 
           <div class="task-column">
-            <div class="px-6 py-4 border-b border-gray-200">
-              <h3 class="text-header">
+            <div
+              class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700"
+            >
+              <h3 class="text-header text-sm sm:text-base">
                 In Progress ({{ inProgressTasks().length }})
               </h3>
             </div>
@@ -151,8 +225,12 @@ import { setFilter, selectCurrentFilter, FilterType } from '../../store';
           </div>
 
           <div class="task-column">
-            <div class="px-6 py-4 border-b border-gray-200">
-              <h3 class="text-header">Done ({{ doneTasks().length }})</h3>
+            <div
+              class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700"
+            >
+              <h3 class="text-header text-sm sm:text-base">
+                Done ({{ doneTasks().length }})
+              </h3>
             </div>
             <app-task-list status="done" />
           </div>

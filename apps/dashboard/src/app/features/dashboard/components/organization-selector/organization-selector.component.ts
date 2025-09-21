@@ -10,15 +10,15 @@ import { setSelectedOrganization, selectSelectedOrgId } from '../../../../store'
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="flex items-center space-x-2">
-      <label for="org-selector" class="text-sm font-medium text-gray-700 dark:text-gray-300">
+    <div class="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+      <label for="org-selector" class="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
         Organization:
       </label>
       <select
         id="org-selector"
         [value]="selectedOrgId()"
         (change)="onOrganizationChange($event)"
-        class="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        class="w-full sm:w-auto px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
       >
         @if (currentUser()?.organization) {
           <option [value]="currentUser()!.organization.id">
