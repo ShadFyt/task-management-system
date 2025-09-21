@@ -16,6 +16,8 @@ import {
 import { TaskService } from '../../../../core/services/task.service';
 import { checkPermission } from '@task-management-system/auth';
 import { AuthService } from '../../../../core/services/auth.service';
+import { zodValidator } from '../../../../core/utils/zod-validators';
+import { createTaskSchema } from '@task-management-system/data';
 
 @Component({
   selector: 'app-task-form',
@@ -47,10 +49,10 @@ import { AuthService } from '../../../../core/services/auth.service';
             <label for="description" class="form-label"> Description </label>
             <textarea
               id="description"
-              formControlName="description"
+              formControlName="content"
               rows="3"
               class="form-input"
-              placeholder="Enter task description (optional)"
+              placeholder="Enter task description"
             ></textarea>
           </div>
 
@@ -133,8 +135,8 @@ export class TaskForm {
 
   selectClasses = computed(() => {
     const hasPermission = this.hasAnyPermission();
-    return hasPermission 
-      ? 'form-input' 
+    return hasPermission
+      ? 'form-input'
       : 'form-input opacity-50 cursor-not-allowed pointer-events-none';
   });
 
@@ -143,11 +145,19 @@ export class TaskForm {
 
   constructor() {
     this.taskForm = this.fb.group({
-      title: ['', [Validators.required, Validators.minLength(3)]],
-      description: [''],
-      type: ['personal', Validators.required],
-      priority: ['medium', Validators.required],
-      dueDate: [''],
+      title: [
+        '',
+        [Validators.required, zodValidator(createTaskSchema.shape.title)],
+      ],
+      content: ['', [zodValidator(createTaskSchema.shape.content)]],
+      type: [
+        'personal',
+        [Validators.required, zodValidator(createTaskSchema.shape.type)],
+      ],
+      priority: [
+        'medium',
+        [Validators.required, zodValidator(createTaskSchema.shape.priority)],
+      ],
     });
 
     effect(() => {
