@@ -50,6 +50,10 @@ export const checkPermission = (
   action: PermissionAction,
   access: PermissionAccess
 ) => {
+  if (!role.permissions) {
+    console.error('No permissions found for role:', role);
+    return false;
+  }
   return role.permissions.some(
     (permission) =>
       permission.entity === entity &&
