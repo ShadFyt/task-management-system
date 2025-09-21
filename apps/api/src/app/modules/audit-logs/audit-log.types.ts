@@ -1,5 +1,5 @@
 export interface CreateAuditLogData {
-  action: 'login' | 'logout' | 'create' | 'update' | 'delete';
+  action: 'login' | 'logout' | 'create' | 'update' | 'delete' | 'read';
 
   resourceType: 'user' | 'organization' | 'task';
 

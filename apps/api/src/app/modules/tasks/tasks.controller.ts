@@ -28,14 +28,14 @@ import {
   createTaskSchema,
   Task,
   taskSchema,
-  tasksQuerySchema,
+  orgQuerySchema,
   updateTaskSchema,
 } from '@task-management-system/data';
 
 class CreateTaskDto extends createZodDto(createTaskSchema) {}
 class TaskDto extends createZodDto(taskSchema) {}
 class UpdateTaskDto extends createZodDto(updateTaskSchema) {}
-class FindTasksQueryDto extends createZodDto(tasksQuerySchema) {}
+class OrgQueryDto extends createZodDto(orgQuerySchema) {}
 
 @ApiTags('tasks')
 @Controller('tasks')
@@ -55,7 +55,7 @@ export class TasksController {
   @ApiResponse({ status: 200, description: 'List of tasks', type: [TaskDto] })
   async findAllByUserOrg(
     @User() user: AuthUser,
-    @Query() query: FindTasksQueryDto
+    @Query() query: OrgQueryDto
   ): Promise<Task[]> {
     const tasks = await this.service.findAllByUserOrg(user, query.orgId);
     return taskSchema.array().parse(tasks);
@@ -67,6 +67,7 @@ export class TasksController {
    * - Work tasks: Only admin/owner roles can create
    * @param user - The authenticated user object.
    * @param dto - The task data to create.
+   * @param query - The organization ID to filter tasks creation by.
    * @returns A promise resolving to the created task.
    */
   @Post()
@@ -82,9 +83,10 @@ export class TasksController {
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   async createTask(
     @User() user: AuthUser,
-    @Body() dto: CreateTaskDto
+    @Body() dto: CreateTaskDto,
+    @Query() query: OrgQueryDto
   ): Promise<Task> {
-    const task = await this.service.createTask(user, dto);
+    const task = await this.service.createTask(user, dto, query.orgId);
     return taskSchema.parse(task);
   }
 

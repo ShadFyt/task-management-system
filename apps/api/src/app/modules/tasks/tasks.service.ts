@@ -15,7 +15,6 @@ import { CreateAuditLogData } from '../audit-logs/audit-log.types';
 import { canUserAccessTask } from '../../common/helpers/rbac.repo-helpers';
 import { CreateTask, UpdateTask } from '@task-management-system/data';
 import { User as AuthUser } from '@task-management-system/data';
-import { checkPermission } from '@task-management-system/auth';
 
 @Injectable()
 export class TasksService {
@@ -39,17 +38,25 @@ export class TasksService {
    */
   async findAllByUserOrg(authUser: AuthUser, orgId?: string): Promise<Task[]> {
     this.logger.log(`Finding all tasks for user: ${authUser.id}`);
-    const { organization, subOrganizations } = authUser;
-    const queryId = orgId ?? organization.id;
-    const validOrgIds = [
-      organization.id,
-      ...subOrganizations.map((org) => org.id),
-    ];
-    if (!validOrgIds.includes(queryId) && !checkPermission(authUser.role, 'task', 'read', 'any')) {
-      throw new ForbiddenException(
-        'You do not have permission to access this organization tasks'
-      );
-    }
+    const baseAuditLogData: CreateAuditLogData = {
+      action: 'read',
+      resourceType: 'task',
+      organizationId: '',
+      route: '/tasks',
+      metadata: {},
+      actorUserId: authUser.id,
+      actorEmail: authUser.email,
+      outcome: 'success',
+      resourceId: '',
+    };
+    const queryId = this.validateOrganizationAccess(
+      authUser,
+      orgId,
+      'access tasks',
+      baseAuditLogData
+    );
+    baseAuditLogData.organizationId = queryId;
+    this.auditLogsService.createAuditLog(baseAuditLogData);
     return this.repo.findAllByOrgIds([queryId]);
   }
 
@@ -59,7 +66,11 @@ export class TasksService {
    * - Personal tasks: Anyone can create (always owned by creator)
    * - Work tasks: Only admin/owner roles can create
    */
-  async createTask(authUser: AuthUser, dto: CreateTask): Promise<Task> {
+  async createTask(
+    authUser: AuthUser,
+    dto: CreateTask,
+    orgId?: string
+  ): Promise<Task> {
     const { id, organization, role } = authUser;
 
     const baseAuditLogData: CreateAuditLogData = {
@@ -73,6 +84,13 @@ export class TasksService {
       outcome: 'success',
       resourceId: '',
     };
+
+    const queryId = this.validateOrganizationAccess(
+      authUser,
+      orgId,
+      'create tasks',
+      baseAuditLogData
+    );
 
     if (dto.type === 'work') {
       if (!['admin', 'owner'].includes(role.name)) {
@@ -91,7 +109,7 @@ export class TasksService {
     const task = await this.repo.createTask({
       ...dto,
       userId: id,
-      organizationId: organization.id,
+      organizationId: queryId,
       status: 'todo',
     });
 
@@ -134,6 +152,13 @@ export class TasksService {
       this.auditLogsService.createAuditLog(baseAuditLogData);
       throw new NotFoundException('Task not found');
     }
+
+    this.validateOrganizationAccess(
+      authUser,
+      task.organizationId,
+      'update',
+      baseAuditLogData
+    );
 
     // Check if user can access this task
     const canAccess = await canUserAccessTask(
@@ -201,6 +226,13 @@ export class TasksService {
       throw new NotFoundException('Task not found');
     }
 
+    this.validateOrganizationAccess(
+      authUser,
+      task.organizationId,
+      'delete',
+      baseAuditLogData
+    );
+
     // Check if user can access this task
     const canAccess = await canUserAccessTask(
       this.userRepo,
@@ -221,5 +253,40 @@ export class TasksService {
 
     await this.repo.deleteTask(taskId);
     this.auditLogsService.createAuditLog(baseAuditLogData);
+  }
+
+  /**
+   * Validates if the user has access to the specified organization - org scope
+   * @param authUser - The authenticated user object
+   * @param orgId - The organization ID to validate (optional, defaults to user's org)
+   * @param action - The action being performed (for error message context)
+   * @param auditLogData - The audit log data to be updated if access is denied
+   * @throws ForbiddenException if user doesn't have access to the organization
+   * @returns The validated organization ID
+   */
+  private validateOrganizationAccess(
+    authUser: AuthUser,
+    orgId: string | undefined,
+    action: string,
+    auditLogData: CreateAuditLogData
+  ): string {
+    const { organization, subOrganizations } = authUser;
+    const queryId = orgId ?? organization.id;
+    const validOrgIds = [
+      organization.id,
+      ...subOrganizations.map((org) => org.id),
+    ];
+
+    if (!validOrgIds.includes(queryId)) {
+      auditLogData.outcome = 'failure';
+      auditLogData.organizationId = queryId;
+      this.auditLogsService.createAuditLog(auditLogData);
+
+      throw new ForbiddenException(
+        `You do not have permission to ${action} for this organization`
+      );
+    }
+
+    return queryId;
   }
 }
