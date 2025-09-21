@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { UserService } from '../users/user.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
@@ -7,6 +12,7 @@ import { Repository } from 'typeorm';
 import { Token } from './token.entity';
 import { UserDto } from '../users/users.dto';
 import { AuthBodyDto } from './auth.dto';
+import { userSchema } from '@task-management-system/data';
 
 @Injectable()
 export class AuthService {
@@ -35,8 +41,10 @@ export class AuthService {
     const foundUser = await this.userService.findOneByIdOrThrow(user.id);
     const jwtPayload = {
       sub: foundUser.id,
+      id: foundUser.id,
       email: foundUser.email,
       role: foundUser.role,
+      name: foundUser.name,
       organizationId: foundUser.organizationId,
     };
 
@@ -60,10 +68,15 @@ export class AuthService {
 
     this.logger.log(`Generated tokens for user: ${user.email}`);
 
+    const { success, data } = userSchema.safeParse(user);
+    if (!success) {
+      throw new InternalServerErrorException('Failed to parse user data');
+    }
+
     return {
       access_token: accessToken,
       refresh_token: refreshToken,
-      user,
+      user: data,
     };
   }
 

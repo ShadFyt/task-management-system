@@ -51,21 +51,6 @@ export interface UpdateTaskRequest {
 }
 
 /**
- * User interface for frontend consumption
- * Simplified version of UserDto for client-side usage
- */
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  organizationId?: string;
-  role?: {
-    id: string;
-    name: string;
-  };
-}
-
-/**
  * Organization interface for frontend consumption
  */
 export interface Organization {

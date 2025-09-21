@@ -1,24 +1,26 @@
 import {
   Controller,
-  Request,
-  Post,
-  UseGuards,
-  SerializeOptions,
   Get,
   HttpCode,
   HttpStatus,
+  Post,
+  Request,
+  UseGuards,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import {
+  ApiBearerAuth,
   ApiBody,
   ApiOperation,
   ApiResponse,
-  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { Public } from '../../core/public.decorator';
 import { UserDto } from '../users/users.dto';
 import { AuthBodyDto, AuthResponseDto } from './auth.dto';
+import { userSchema, User } from '@task-management-system/data';
+import { AuthResponse } from '@task-management-system/auth';
 
 interface AuthenticatedRequest extends Request {
   user: UserDto;
@@ -29,7 +31,6 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Public()
-  @SerializeOptions({ type: AuthResponseDto })
   @UseGuards(AuthGuard('local'))
   @Post('login')
   @ApiOperation({ summary: 'User login' })
@@ -40,7 +41,7 @@ export class AuthController {
     type: AuthResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async login(@Request() req: AuthenticatedRequest): Promise<AuthResponseDto> {
+  async login(@Request() req: AuthenticatedRequest): Promise<AuthResponse> {
     return this.authService.login(req.user);
   }
 
@@ -60,7 +61,10 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user' })
   @ApiResponse({ status: 200, description: 'Current user info', type: UserDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async self(@Request() req: AuthenticatedRequest): Promise<UserDto> {
-    return req.user;
+  async self(@Request() req: AuthenticatedRequest): Promise<User> {
+    const { success, data } = userSchema.safeParse(req.user);
+    if (!success)
+      throw new InternalServerErrorException('Failed to parse user data');
+    return data;
   }
 }

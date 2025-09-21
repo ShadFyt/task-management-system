@@ -6,7 +6,7 @@ import { TaskService } from '../../core/services/task.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { TaskList } from './components/task-list/task-list.component';
 import { TaskForm } from './components/task-form/task-form.component';
-import { User } from '@task-management-system/auth';
+import { User } from '@task-management-system/data';
 import { TaskType } from '@task-management-system/data';
 import { LucideAngularModule, MoonIcon, SunIcon } from 'lucide-angular';
 
