@@ -4,10 +4,9 @@
   "license": "MIT",
   "scripts": {
     "start:api": "npx nx serve api",
-    "start:dashboard": "npx nx serve dashboard",
+    "start:dashboard": "npx nx run dashboard:serve:development --host 127.0.0.1",
     "build:api": "npx nx build api",
     "build:dashboard": "npx nx build dashboard",
-    "dev": "concurrently \"npm run start:api\" \"npm run start:dashboard\"",
     "setup": "npm install && npm run build:api"
   },
   "private": true,
