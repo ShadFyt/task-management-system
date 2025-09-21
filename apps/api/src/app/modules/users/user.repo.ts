@@ -1,7 +1,14 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { User } from './users.entity';
 import { InjectRepository } from '@nestjs/typeorm';
+
+const relations = [
+  'role',
+  'role.permissions',
+  'organization',
+  'organization.children',
+];
 
 @Injectable()
 export class UserRepo {
@@ -13,14 +20,14 @@ export class UserRepo {
   async findOneByEmail(email: string): Promise<User | null> {
     return this.repo.findOne({
       where: { email },
-      relations: ['role', 'role.permissions'],
+      relations: relations,
     });
   }
 
   async findOneById(id: string): Promise<User | null> {
     return this.repo.findOne({
       where: { id },
-      relations: ['role', 'role.permissions'],
+      relations: relations,
     });
   }
 }

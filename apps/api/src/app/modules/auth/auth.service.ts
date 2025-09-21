@@ -39,13 +39,25 @@ export class AuthService {
   async login(user: User): Promise<AuthResponse> {
     const payload = { sub: user.id, email: user.email };
     const foundUser = await this.userService.findOneByIdOrThrow(user.id);
+
+    const { organization, ...rest } = foundUser;
+
+    const subOrganizations = organization.children.map((org) => ({
+      id: org.id,
+      name: org.name,
+    }));
+    const mappedOrganization = {
+      id: foundUser.organizationId,
+      name: foundUser.organization.name,
+    };
     const jwtPayload = {
       sub: foundUser.id,
       id: foundUser.id,
       email: foundUser.email,
       role: foundUser.role,
       name: foundUser.name,
-      organizationId: foundUser.organizationId,
+      organization: mappedOrganization,
+      subOrganizations,
     };
 
     const accessToken = this.jwtService.sign(jwtPayload, {
@@ -68,7 +80,11 @@ export class AuthService {
 
     this.logger.log(`Generated tokens for user: ${user.email}`);
 
-    const { success, data } = userSchema.safeParse(user);
+    const { success, data } = userSchema.safeParse({
+      ...rest,
+      subOrganizations,
+      organization: mappedOrganization,
+    });
     if (!success) {
       throw new InternalServerErrorException('Failed to parse user data');
     }
