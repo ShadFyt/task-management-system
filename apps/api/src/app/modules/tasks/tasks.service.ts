@@ -13,8 +13,19 @@ import { User } from '../users/users.entity';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { CreateAuditLogData } from '../audit-logs/audit-log.types';
 import { canUserAccessTask } from '../../common/helpers/rbac.repo-helpers';
-import { CreateTask, UpdateTask } from '@task-management-system/data';
+import {
+  CreateTask,
+  PermissionAction,
+  UpdateTask,
+} from '@task-management-system/data';
 import { User as AuthUser } from '@task-management-system/data';
+import { checkPermission } from '@task-management-system/auth';
+
+interface PermissionCheckResult {
+  hasAccess: boolean;
+  reason?: string;
+  errorMessage: string;
+}
 
 @Injectable()
 export class TasksService {
@@ -49,12 +60,7 @@ export class TasksService {
       outcome: 'success',
       resourceId: '',
     };
-    const queryId = this.validateOrganizationAccess(
-      authUser,
-      orgId,
-      'access tasks',
-      baseAuditLogData
-    );
+    const queryId = this.validateOrganizationAccess(authUser, orgId, 'read');
     baseAuditLogData.organizationId = queryId;
     this.auditLogsService.createAuditLog(baseAuditLogData);
     return this.repo.findAllByOrgIds([queryId]);
@@ -85,12 +91,7 @@ export class TasksService {
       resourceId: '',
     };
 
-    const queryId = this.validateOrganizationAccess(
-      authUser,
-      orgId,
-      'create tasks',
-      baseAuditLogData
-    );
+    const queryId = this.validateOrganizationAccess(authUser, orgId, 'create');
 
     if (dto.type === 'work') {
       if (!['admin', 'owner'].includes(role.name)) {
@@ -106,17 +107,22 @@ export class TasksService {
       }
     }
 
-    const task = await this.repo.createTask({
-      ...dto,
-      userId: id,
-      organizationId: queryId,
-      status: 'todo',
-    });
+    try {
+      const task = await this.repo.createTask({
+        ...dto,
+        userId: id,
+        organizationId: queryId,
+        status: 'todo',
+      });
 
-    baseAuditLogData.resourceId = task.id;
-    this.auditLogsService.createAuditLog(baseAuditLogData);
-
-    return task;
+      baseAuditLogData.resourceId = task.id;
+      this.auditLogsService.createAuditLog(baseAuditLogData);
+      return task;
+    } catch (e) {
+      baseAuditLogData.outcome = 'failure';
+      this.auditLogsService.createAuditLog(baseAuditLogData);
+      throw e;
+    }
   }
 
   /**
@@ -153,12 +159,7 @@ export class TasksService {
       throw new NotFoundException('Task not found');
     }
 
-    this.validateOrganizationAccess(
-      authUser,
-      task.organizationId,
-      'update',
-      baseAuditLogData
-    );
+    this.validateOrganizationAccess(authUser, task.organizationId, 'update');
 
     // Check if user can access this task
     const canAccess = await canUserAccessTask(
@@ -226,12 +227,7 @@ export class TasksService {
       throw new NotFoundException('Task not found');
     }
 
-    this.validateOrganizationAccess(
-      authUser,
-      task.organizationId,
-      'delete',
-      baseAuditLogData
-    );
+    this.validateOrganizationAccess(authUser, task.organizationId, 'delete');
 
     // Check if user can access this task
     const canAccess = await canUserAccessTask(
@@ -260,33 +256,121 @@ export class TasksService {
    * @param authUser - The authenticated user object
    * @param orgId - The organization ID to validate (optional, defaults to user's org)
    * @param action - The action being performed (for error message context)
-   * @param auditLogData - The audit log data to be updated if access is denied
    * @throws ForbiddenException if user doesn't have access to the organization
    * @returns The validated organization ID
    */
   private validateOrganizationAccess(
     authUser: AuthUser,
     orgId: string | undefined,
-    action: string,
-    auditLogData: CreateAuditLogData
+    action: PermissionAction
   ): string {
-    const { organization, subOrganizations } = authUser;
-    const queryId = orgId ?? organization.id;
-    const validOrgIds = [
-      organization.id,
-      ...subOrganizations.map((org) => org.id),
-    ];
+    const targetOrgId = orgId ?? authUser.organization.id;
 
-    if (!validOrgIds.includes(queryId)) {
-      auditLogData.outcome = 'failure';
-      auditLogData.organizationId = queryId;
-      this.auditLogsService.createAuditLog(auditLogData);
+    // Check permission based on organization relationship
+    const permissionResult = this.checkOrganizationPermission(
+      authUser,
+      targetOrgId,
+      action
+    );
 
-      throw new ForbiddenException(
-        `You do not have permission to ${action} for this organization`
+    if (!permissionResult.hasAccess) {
+      this.logAccessDenied(
+        authUser,
+        targetOrgId,
+        action,
+        permissionResult.reason
       );
+      throw new ForbiddenException(permissionResult.errorMessage);
     }
 
-    return queryId;
+    return targetOrgId;
+  }
+
+  /**
+   * Checks if the authenticated user has the required permission to perform a specific action
+   * on a given organization or its sub-organizations.
+   *
+   * @param authUser - The authenticated user requesting access.
+   * @param targetOrgId - The ID of the organization being targeted.
+   * @param action - The desired action that the user wants to perform.
+   * @return An object indicating whether the user has access, and
+   * potentially including reasons and error messages if access is denied.
+   */
+  private checkOrganizationPermission(
+    authUser: AuthUser,
+    targetOrgId: string,
+    action: PermissionAction
+  ): PermissionCheckResult {
+    const { organization, subOrganizations } = authUser;
+
+    // Users own organization - always allowed
+    if (targetOrgId === organization.id) {
+      return {
+        hasAccess: true,
+        errorMessage: '',
+      };
+    }
+
+    const isSubOrg = subOrganizations.some((org) => org.id === targetOrgId);
+    if (!isSubOrg) {
+      return {
+        hasAccess: false,
+        reason: 'organization_not_accessible',
+        errorMessage: `Organization ${targetOrgId} is not accessible to user`,
+      };
+    }
+
+    // Check permissions for sub organization access
+    const hasPermission = checkPermission(authUser.role, 'task', action, 'any');
+    if (!hasPermission) {
+      return {
+        hasAccess: false,
+        reason: 'insufficient_sub_org_permissions',
+        errorMessage: `Insufficient permissions to ${action} in sub-organization`,
+      };
+    }
+
+    return {
+      hasAccess: true,
+      errorMessage: '',
+    };
+  }
+
+  private async logAccessDenied(
+    authUser: AuthUser,
+    deniedOrgId: string,
+    action: PermissionAction,
+    reason?: string
+  ): Promise<void> {
+    const auditLogData: CreateAuditLogData = {
+      actorUserId: authUser.id,
+      action: `organization_access_denied`,
+      resourceId: deniedOrgId,
+      resourceType: 'organization',
+      outcome: 'failure',
+      organizationId: authUser.organization.id, // User's actual org, not denied org
+      metadata: {
+        deniedOrganizationId: deniedOrgId,
+        attemptedAction: action,
+        denialReason: reason || 'access_denied',
+        userPermissions: this.summarizeUserPermissions(authUser),
+        timestamp: new Date().toISOString(),
+      },
+    };
+
+    this.auditLogsService.createAuditLog(auditLogData).catch((error) => {
+      this.logger.error('Audit log creation failed', {
+        error,
+        auditData: auditLogData,
+      });
+    });
+  }
+
+  private summarizeUserPermissions(authUser: AuthUser): object {
+    return {
+      organizationId: authUser.organization.id,
+      subOrganizationCount: authUser.subOrganizations.length,
+      subOrganizationIds: authUser.subOrganizations.map((org) => org.id),
+    };
   }
 }

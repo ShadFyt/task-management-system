@@ -72,7 +72,7 @@ export class TasksController {
    */
   @Post()
   @UseGuards(PermissionGuard)
-  @RequirePermission('create:task:own')
+  @RequirePermission('create:task:own,any')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new task' })
   @ApiResponse({
