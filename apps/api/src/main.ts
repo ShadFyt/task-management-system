@@ -52,9 +52,9 @@ async function bootstrap() {
     )
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, cleanupOpenApiDoc(documentFactory()));
-  const globalPrefix = 'api';
-  app.setGlobalPrefix(globalPrefix);
+  SwaggerModule.setup('docs', app, cleanupOpenApiDoc(documentFactory()));
+  /*  const globalPrefix = 'api';  not sure how to add global prefix as adding api/docs to swagger url doesn't work
+  app.setGlobalPrefix(globalPrefix);*/
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -70,9 +70,7 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
-  Logger.log(
-    `🚀 Application is running on: http://localhost:${port}/${globalPrefix}`
-  );
+  Logger.log(`🚀 Application is running on: http://localhost:${port}/`);
 }
 
 bootstrap();
