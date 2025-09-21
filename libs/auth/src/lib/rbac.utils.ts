@@ -3,6 +3,7 @@ import {
   PermissionAccess,
   PermissionAction,
   PermissionEntity,
+  Role,
 } from '@task-management-system/data';
 
 /**
@@ -32,4 +33,48 @@ export const parsePermissionString = (p: PermissionString) => {
     ? (accessPart.split(',').filter(Boolean) as PermissionAccess[])
     : undefined;
   return { action, entity, access };
+};
+
+/**
+ * Checks if a given role has the required permission for a specific entity, action, and access level.
+ *
+ * @param role - The role object containing a set of permissions.
+ * @param entity - The entity for which the permission is being checked.
+ * @param action - The action to be performed on the entity.
+ * @param access - The access level required for the action.
+ * @returns Returns true if the role has the required permission; otherwise, returns false.
+ */
+export const checkPermission = (
+  role: Role,
+  entity: PermissionEntity,
+  action: PermissionAction,
+  access: PermissionAccess
+) => {
+  return role.permissions.some(
+    (permission) =>
+      permission.entity === entity &&
+      permission.action === action &&
+      permission.access.includes(access)
+  );
+};
+
+/**
+ * Checks whether a given role has the required permission based on a permission string.
+ *
+ * @param role - The role object containing assigned permissions.
+ * @param permissionString - A string representation of the required permission.
+ * @returns Returns `true` if the role has the required permission, otherwise `false`.
+ */
+export const checkPermissionByString = (
+  role: Role,
+  permissionString: PermissionString
+) => {
+  const { action, entity, access } = parsePermissionString(permissionString);
+
+  return role.permissions.some(
+    (permission) =>
+      permission.entity === entity &&
+      permission.action === action &&
+      (!access || access.length === 0 || access.includes(permission.access))
+  );
 };

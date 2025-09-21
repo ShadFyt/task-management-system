@@ -1,32 +1,11 @@
 import { z } from 'zod';
-import { PermissionAction } from './interfaces/permission.type';
 
-const ACTIONS = {
-  CREATE: 'create',
-  READ: 'read',
-  UPDATE: 'update',
-  DELETE: 'delete',
-};
-
-const ENTITY = {
-  TASK: 'task',
-  USER: 'user',
-  AUDIT_LOG: 'audit-log',
-};
-
-const ACCESS = {
-  OWN: 'own',
-  ANY: 'any',
-  OWN_ANY: 'own,any',
-  ANY_OWN: 'any,own',
-};
-
-export const ActionEnum = z.nativeEnum(ACTIONS);
-export const EntityEnum = z.nativeEnum(ENTITY);
-export const AccessEnum = z.nativeEnum(ACCESS);
+export const ActionEnum = z.enum(['create', 'read', 'update', 'delete']);
+export const EntityEnum = z.enum(['task', 'user', 'audit-log']);
+export const AccessEnum = z.enum(['own', 'any', 'own,any', 'any,own']);
 
 export const permissionSchema = z.object({
-  id: z.string(),
+  id: z.string().min(1),
   description: z.string(),
   action: ActionEnum,
   entity: EntityEnum,
