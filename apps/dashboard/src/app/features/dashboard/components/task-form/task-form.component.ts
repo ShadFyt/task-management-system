@@ -1,4 +1,11 @@
-import { Component, computed, inject, output, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  output,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormGroup,
@@ -7,6 +14,8 @@ import {
   FormBuilder,
 } from '@angular/forms';
 import { TaskService } from '../../../../core/services/task.service';
+import { checkPermission } from '@task-management-system/auth';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-task-form',
@@ -47,10 +56,22 @@ import { TaskService } from '../../../../core/services/task.service';
 
           <div>
             <label for="type" class="form-label"> Type * </label>
-            <select id="type" formControlName="type" class="form-input">
+            <select
+              id="type"
+              formControlName="type"
+              [class]="selectClasses()"
+              [disabled]="!hasAnyPermission()"
+            >
               <option value="personal">Personal</option>
+              @if (hasAnyPermission()) {
               <option value="work">Work</option>
+              }
             </select>
+            @if (!hasAnyPermission()) {
+            <p class="text-sm text-gray-500 mt-1">
+              You can only create personal tasks
+            </p>
+            }
           </div>
 
           <div>
@@ -96,6 +117,7 @@ import { TaskService } from '../../../../core/services/task.service';
 export class TaskForm {
   private fb = inject(FormBuilder);
   private taskService = inject(TaskService);
+  private authService = inject(AuthService);
 
   taskForm: FormGroup;
   private readonly _loading = signal(false);
@@ -103,6 +125,18 @@ export class TaskForm {
   private readonly _error = signal<string | null>(null);
   readonly error = this._error.asReadonly();
   readonly canSubmit = computed(() => this.taskForm.valid && !this.loading());
+  hasAnyPermission = computed(() => {
+    const user = this.authService.user();
+    if (!user) return false;
+    return checkPermission(user.role, 'task', 'create', 'any');
+  });
+
+  selectClasses = computed(() => {
+    const hasPermission = this.hasAnyPermission();
+    return hasPermission 
+      ? 'form-input' 
+      : 'form-input opacity-50 cursor-not-allowed pointer-events-none';
+  });
 
   taskCreated = output<void>();
   cancelled = output<void>();
@@ -114,6 +148,12 @@ export class TaskForm {
       type: ['personal', Validators.required],
       priority: ['medium', Validators.required],
       dueDate: [''],
+    });
+
+    effect(() => {
+      if (!this.hasAnyPermission()) {
+        this.taskForm.patchValue({ type: 'personal' });
+      }
     });
   }
 
