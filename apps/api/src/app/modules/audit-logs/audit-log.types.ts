@@ -1,5 +1,12 @@
 export interface CreateAuditLogData {
-  action: 'login' | 'logout' | 'create' | 'update' | 'delete' | 'read';
+  action:
+    | 'login'
+    | 'logout'
+    | 'create'
+    | 'update'
+    | 'delete'
+    | 'read'
+    | 'organization_access_denied';
 
   resourceType: 'user' | 'organization' | 'task';
 

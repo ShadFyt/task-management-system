@@ -150,7 +150,7 @@ const rolePermissionMappings: Record<RoleName, string[]> = {
   admin: [
     // Can manage tasks and users, view audit logs
     'create:task:any',
-    'read:task:any',
+    'read:task:any',  // can read sub-org tasks
     'update:task:any',
     'delete:task:any',
     'create:user:any',
@@ -161,7 +161,7 @@ const rolePermissionMappings: Record<RoleName, string[]> = {
   viewer: [
     // Can read all tasks in organization and manage own profile
     // Can update and delete personal tasks
-    'read:task:any',
+    'read:task:own', // can read personal tasks or direct org tasks
     'read:user:own',
     'update:user:own',
     'update:task:own',
@@ -268,6 +268,13 @@ export class DatabaseSeederService {
         role: adminRole,
         password: hashedPassword,
         organization: org,
+      },
+      {
+        email: 'admin2@example.com',
+        name: 'Admin User 2',
+        role: adminRole,
+        password: hashedPassword,
+        organization: subOrg,
       },
       {
         email: 'user@example.com',
