@@ -32,8 +32,6 @@ export class TasksService {
   private readonly logger = new Logger(TasksService.name);
   constructor(
     private readonly repo: TasksRepo,
-    @InjectRepository(Organization)
-    private readonly orgRepo: Repository<Organization>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     private readonly auditLogsService: AuditLogsService
