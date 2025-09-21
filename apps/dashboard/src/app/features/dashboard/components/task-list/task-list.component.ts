@@ -1,15 +1,12 @@
 import { Component, signal, inject, computed, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Store } from '@ngrx/store';
 import { TaskService } from '../../../../core/services/task.service';
 import { Task } from '@task-management-system/data';
-import {
-  LucideAngularModule,
-  DeleteIcon,
-  TrashIcon,
-  HourglassIcon,
-} from 'lucide-angular';
+import { LucideAngularModule, TrashIcon, HourglassIcon } from 'lucide-angular';
 import { AuthService } from '../../../../core/services/auth.service';
 import { checkPermission } from '@task-management-system/auth';
+import { selectCurrentFilter } from '../../../../store';
 
 @Component({
   selector: 'app-task-list',
@@ -37,8 +34,8 @@ import { checkPermission } from '@task-management-system/auth';
           </div>
         </div>
 
-        @if (task.description) {
-        <p class="text-sm text-gray-600 mb-3">{{ task.description }}</p>
+        @if (task.content) {
+        <p class="text-sm text-gray-600 mb-3">{{ task.content }}</p>
         }
 
         <div class="flex justify-between items-center text-xs text-gray-500">
@@ -100,14 +97,25 @@ import { checkPermission } from '@task-management-system/auth';
   styles: [],
 })
 export class TaskList {
+  private store = inject(Store);
   private taskService = inject(TaskService);
   private authService = inject(AuthService);
 
   status = input<'todo' | 'in-progress' | 'done'>('todo');
+  currentFilter = this.store.selectSignal(selectCurrentFilter);
 
-  filteredTasks = computed(() =>
-    this.taskService.tasks().filter((task) => task.status === this.status())
-  );
+  filteredTasks = computed(() => {
+    let tasks = this.taskService
+      .tasks()
+      .filter((task) => task.status === this.status());
+
+    const filter = this.currentFilter();
+    if (filter !== 'all') {
+      tasks = tasks.filter((task) => task.type === filter);
+    }
+
+    return tasks;
+  });
 
   canDeleteTask = (task: Task): boolean => {
     const user = this.authService.user();
@@ -118,12 +126,9 @@ export class TaskList {
       return checkPermission(user.role, 'task', 'delete', 'any');
     }
 
-    // For personal tasks: can delete own tasks, or need delete:task:any for others
     if (task.type === 'personal') {
       // Can always delete own personal tasks
       if (task.userId === user.id) return true; // you should only be able to see your own personal tasks so this is redundant but it's good to have
-
-      // Need delete:task:any permission for others' personal tasks
       return checkPermission(user.role, 'task', 'delete', 'any'); // I dont think this should be allowed will change if time permits
     }
 
@@ -176,7 +181,6 @@ export class TaskList {
     }
   }
 
-  protected readonly DeleteIcon = DeleteIcon;
   protected readonly TrashIcon = TrashIcon;
   protected readonly HourglassIcon = HourglassIcon;
 }

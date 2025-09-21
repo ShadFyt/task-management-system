@@ -1,5 +1,6 @@
 import { Injectable, inject, signal, effect } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Store } from '@ngrx/store';
 import { firstValueFrom, catchError, finalize, throwError } from 'rxjs';
 import { API_BASE } from '../tokens';
 import {
@@ -7,6 +8,7 @@ import {
   Task,
   UpdateTaskRequest,
 } from '@task-management-system/data';
+import { selectSelectedOrgId } from '../../store';
 
 /**
  * TaskService - service for task management.
@@ -30,8 +32,10 @@ import {
 })
 export class TaskService {
   private http = inject(HttpClient);
+  private store = inject(Store);
 
   private readonly API_URL = inject(API_BASE);
+  private selectedOrgId = this.store.selectSignal(selectSelectedOrgId);
 
   readonly tasks = signal<Task[]>([]);
   public loading = signal<boolean>(false);
@@ -44,6 +48,7 @@ export class TaskService {
   /**
    * Loads the tasks from the API and updates the respective state properties.
    * Updates the `loading`, `error`, and `tasks` state during the process.
+   * Optionally filters by organization ID if one is selected.
    *
    * @return A promise that resolves when the tasks are loaded and state is updated.
    */
@@ -51,8 +56,14 @@ export class TaskService {
     this.loading.set(true);
     this.error.set(null);
     try {
+      let params = new HttpParams();
+      const orgId = this.selectedOrgId();
+      if (orgId) {
+        params = params.set('orgId', orgId);
+      }
+      
       const tasks = await firstValueFrom(
-        this.http.get<Task[]>(`${this.API_URL}/tasks`)
+        this.http.get<Task[]>(`${this.API_URL}/tasks`, { params })
       );
       this.tasks.set(tasks);
     } catch (e: any) {
@@ -118,8 +129,9 @@ export class TaskService {
 
   constructor() {
     effect(async () => {
-      // Only trigger refetch when bump signal changes
+      // Trigger refetch when bump signal or selected organization changes
       this.bump();
+      this.selectedOrgId();
       await this.load();
     });
   }
