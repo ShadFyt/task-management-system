@@ -1,21 +1,27 @@
-import { Component, signal, computed, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Store } from '@ngrx/store';
 import { AuthService } from '../../core/services/auth.service';
 import { TaskService } from '../../core/services/task.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { TaskList } from './components/task-list/task-list.component';
 import { TaskForm } from './components/task-form/task-form.component';
-import { User } from '@task-management-system/data';
-import { TaskType } from '@task-management-system/data';
+import { OrganizationSelector } from './components/organization-selector/organization-selector.component';
 import { LucideAngularModule, MoonIcon, SunIcon } from 'lucide-angular';
-
-type FilterType = 'all' | TaskType;
+import { setFilter, selectCurrentFilter, FilterType } from '../../store';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, TaskList, TaskForm, LucideAngularModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TaskList,
+    TaskForm,
+    OrganizationSelector,
+    LucideAngularModule,
+  ],
   template: `
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
       <header
@@ -35,6 +41,8 @@ type FilterType = 'all' | TaskType;
             </div>
 
             <div class="flex items-center space-x-4">
+              <app-organization-selector></app-organization-selector>
+
               <div class="flex space-x-2">
                 @for (filter of filterOptions; track filter.key) {
                 <button
@@ -155,13 +163,14 @@ type FilterType = 'all' | TaskType;
   `,
 })
 export class Dashboard {
+  private store = inject(Store);
   public authService = inject(AuthService);
   public taskService = inject(TaskService);
   public themeService = inject(ThemeService);
 
-  currentUser = signal<User | null>(null);
+  currentUser = computed(() => this.authService.user());
   showTaskForm = false;
-  currentFilter = signal<FilterType>('all');
+  currentFilter = this.store.selectSignal(selectCurrentFilter);
 
   filteredTasks = computed(() => {
     const filter = this.currentFilter();
@@ -190,7 +199,7 @@ export class Dashboard {
   totalTasks = computed(() => this.taskService.tasks().length);
 
   setFilter(filter: FilterType): void {
-    this.currentFilter.set(filter);
+    this.store.dispatch(setFilter({ filter }));
   }
 
   readonly filterOptions: { key: FilterType; label: string }[] = [
