@@ -11,9 +11,11 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
 import { TasksModule } from './modules/tasks/tasks.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CoreModule } from './core/core.module';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { GlobalJwtAuthGuard } from './core/global-jwt-auth.guard';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
+import { ZodSerializerInterceptor, ZodValidationPipe } from 'nestjs-zod';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 @Module({
   imports: [
@@ -42,7 +44,7 @@ import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
     UsersModule,
     OrganizationsModule,
     TasksModule,
-    AuditLogsModule
+    AuditLogsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -50,6 +52,18 @@ import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
     {
       provide: APP_GUARD,
       useClass: GlobalJwtAuthGuard,
+    },
+    {
+      provide: APP_PIPE,
+      useClass: ZodValidationPipe,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ZodSerializerInterceptor,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: HttpExceptionFilter,
     },
   ],
 })
