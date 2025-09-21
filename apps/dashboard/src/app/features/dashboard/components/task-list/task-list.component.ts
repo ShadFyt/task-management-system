@@ -2,11 +2,19 @@ import { Component, signal, inject, computed, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TaskService } from '../../../../core/services/task.service';
 import { Task } from '@task-management-system/data';
+import {
+  LucideAngularModule,
+  DeleteIcon,
+  TrashIcon,
+  HourglassIcon,
+} from 'lucide-angular';
+import { AuthService } from '../../../../core/services/auth.service';
+import { checkPermission } from '@task-management-system/auth';
 
 @Component({
   selector: 'app-task-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, LucideAngularModule],
   template: `
     <div class="min-h-[200px] p-4">
       @if (filteredTasks().length === 0) {
@@ -35,40 +43,54 @@ import { Task } from '@task-management-system/data';
 
         <div class="flex justify-between items-center text-xs text-gray-500">
           <div class="flex space-x-2">
-            @if (status() !== 'todo') {
-            <button
-              (click)="changeStatus(task, 'todo')"
-              class="text-yellow-600 hover:text-yellow-800 font-medium"
-              title="Move to To Do"
-            >
-              ← To Do
-            </button>
-            } @if (status() !== 'in-progress') {
-            <button
-              (click)="changeStatus(task, 'in-progress')"
-              class="text-blue-600 hover:text-blue-800 font-medium"
-              title="Move to In Progress"
-            >
-              ↔ Progress
-            </button>
-            } @if (status() !== 'done') {
-            <button
-              (click)="changeStatus(task, 'done')"
-              class="text-green-600 hover:text-green-800 font-medium"
-              title="Move to Done"
-            >
-              → Done
-            </button>
-            }
+            <div>
+              @if (status() !== 'todo') {
+              <button
+                (click)="changeStatus(task, 'todo')"
+                class="text-yellow-600 hover:text-yellow-800 font-medium"
+                title="Move to To Do"
+              >
+                ← To Do
+              </button>
+              } @if (status() !== 'in-progress') {
+              <button
+                (click)="changeStatus(task, 'in-progress')"
+                class="text-blue-600 hover:text-blue-800 font-medium"
+                title="Move to In Progress"
+              >
+                ↔ Progress
+              </button>
+              } @if (status() !== 'done') {
+              <button
+                (click)="changeStatus(task, 'done')"
+                class="text-green-600 hover:text-green-800 font-medium"
+                title="Move to Done"
+              >
+                → Done
+              </button>
+              }
+            </div>
 
+            @if (canDeleteTask(task)) {
             <button
               (click)="deleteTask(task)"
               class="text-red-600 hover:text-red-800 font-medium ml-2"
               title="Delete Task"
               [disabled]="deleting() === task.id"
             >
-              @if (deleting() === task.id) { ⏳ } @else { 🗑️ }
+              @if (deleting() === task.id) {
+              <lucide-angular
+                class="w-4 h-4"
+                [img]="HourglassIcon"
+              ></lucide-angular>
+              } @else {
+              <lucide-angular
+                class="w-4 h-4"
+                [img]="TrashIcon"
+              ></lucide-angular>
+              }
             </button>
+            }
           </div>
         </div>
       </section>
@@ -79,12 +101,34 @@ import { Task } from '@task-management-system/data';
 })
 export class TaskList {
   private taskService = inject(TaskService);
+  private authService = inject(AuthService);
 
   status = input<'todo' | 'in-progress' | 'done'>('todo');
 
   filteredTasks = computed(() =>
     this.taskService.tasks().filter((task) => task.status === this.status())
   );
+
+  canDeleteTask = (task: Task): boolean => {
+    const user = this.authService.user();
+    if (!user?.role) return false;
+
+    // If it's a work task, need delete:task:any permission
+    if (task.type === 'work') {
+      return checkPermission(user.role, 'task', 'delete', 'any');
+    }
+
+    // For personal tasks: can delete own tasks, or need delete:task:any for others
+    if (task.type === 'personal') {
+      // Can always delete own personal tasks
+      if (task.userId === user.id) return true; // you should only be able to see your own personal tasks so this is redundant but it's good to have
+
+      // Need delete:task:any permission for others' personal tasks
+      return checkPermission(user.role, 'task', 'delete', 'any'); // I dont think this should be allowed will change if time permits
+    }
+
+    return false;
+  };
 
   deleting = signal<string | null>(null);
 
@@ -131,4 +175,8 @@ export class TaskList {
         return `${baseClass} bg-gray-100 text-gray-800`;
     }
   }
+
+  protected readonly DeleteIcon = DeleteIcon;
+  protected readonly TrashIcon = TrashIcon;
+  protected readonly HourglassIcon = HourglassIcon;
 }
