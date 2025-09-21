@@ -27,5 +27,13 @@
   .text-header {
     @apply text-lg font-semibold text-gray-900
   }
+
+  .text-error {
+    @apply bg-red-50 border border-red-200 text-red-700
+  }
+
+  .task-column {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200
+  }
 }
 
