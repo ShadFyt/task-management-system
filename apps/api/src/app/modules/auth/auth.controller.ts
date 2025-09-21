@@ -17,14 +17,21 @@ import {
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { Public } from '../../core/public.decorator';
-import { UserDto } from '../users/users.dto';
-import { AuthBodyDto, AuthResponseDto } from './auth.dto';
 import { userSchema, User } from '@task-management-system/data';
-import { AuthResponse } from '@task-management-system/auth';
+import {
+  authBodySchema,
+  AuthResponse,
+  authResponseSchema,
+} from '@task-management-system/auth';
+import { createZodDto } from 'nestjs-zod';
 
 interface AuthenticatedRequest extends Request {
-  user: UserDto;
+  user: User;
 }
+
+class UserDto extends createZodDto(userSchema) {}
+class AuthResponseDto extends createZodDto(authResponseSchema) {}
+class AuthBodyDto extends createZodDto(authBodySchema) {}
 
 @Controller('auth')
 export class AuthController {
@@ -59,7 +66,11 @@ export class AuthController {
   @ApiBearerAuth('JWT-auth')
   @Get('self')
   @ApiOperation({ summary: 'Get current user' })
-  @ApiResponse({ status: 200, description: 'Current user info', type: UserDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Current user info',
+    type: UserDto,
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async self(@Request() req: AuthenticatedRequest): Promise<User> {
     const { success, data } = userSchema.safeParse(req.user);

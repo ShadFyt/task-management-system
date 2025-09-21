@@ -11,8 +11,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Token } from './token.entity';
 import { UserDto } from '../users/users.dto';
-import { AuthBodyDto } from './auth.dto';
-import { userSchema } from '@task-management-system/data';
+import { User, userSchema } from '@task-management-system/data';
+import { AuthBody, AuthResponse } from '@task-management-system/auth';
 
 @Injectable()
 export class AuthService {
@@ -25,7 +25,7 @@ export class AuthService {
     private tokenRepository: Repository<Token>
   ) {}
 
-  async validateUser(dto: AuthBodyDto): Promise<UserDto | null> {
+  async validateUser(dto: AuthBody): Promise<UserDto | null> {
     const { email, password } = dto;
     this.logger.log(`Validating user: ${email}`);
     const user = await this.userService.findOneByEmail(email);
@@ -36,7 +36,7 @@ export class AuthService {
     return null;
   }
 
-  async login(user: UserDto) {
+  async login(user: User): Promise<AuthResponse> {
     const payload = { sub: user.id, email: user.email };
     const foundUser = await this.userService.findOneByIdOrThrow(user.id);
     const jwtPayload = {
