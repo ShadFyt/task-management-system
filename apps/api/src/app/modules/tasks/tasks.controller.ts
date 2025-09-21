@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -9,6 +8,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
@@ -17,6 +17,7 @@ import { User } from '../../common/decorators/user.decorator';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -27,12 +28,14 @@ import {
   createTaskSchema,
   Task,
   taskSchema,
+  tasksQuerySchema,
   updateTaskSchema,
 } from '@task-management-system/data';
 
 class CreateTaskDto extends createZodDto(createTaskSchema) {}
 class TaskDto extends createZodDto(taskSchema) {}
 class UpdateTaskDto extends createZodDto(updateTaskSchema) {}
+class FindTasksQueryDto extends createZodDto(tasksQuerySchema) {}
 
 @ApiTags('tasks')
 @Controller('tasks')
@@ -44,9 +47,17 @@ export class TasksController {
   @RequirePermission('read:task:own,any')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get all tasks accessible to the user' })
+  @ApiQuery({
+    name: 'orgId',
+    required: false,
+    description: 'Organization ID to filter tasks by',
+  })
   @ApiResponse({ status: 200, description: 'List of tasks', type: [TaskDto] })
-  async findAllByUserOrg(@User() user: AuthUser): Promise<Task[]> {
-    const tasks = await this.service.findAllByUserOrg(user);
+  async findAllByUserOrg(
+    @User() user: AuthUser,
+    @Query() query: FindTasksQueryDto
+  ): Promise<Task[]> {
+    const tasks = await this.service.findAllByUserOrg(user, query.orgId);
     return taskSchema.array().parse(tasks);
   }
 

@@ -31,6 +31,12 @@ export const taskSchema = z.object({
   updatedAt: z.date().optional(),
 });
 
+export const tasksQuerySchema = z.object({
+  orgId: z.string().uuid().optional(),
+});
+
 export type CreateTask = z.infer<typeof createTaskSchema>;
 export type UpdateTask = z.infer<typeof updateTaskSchema>;
 export type Task = z.infer<typeof taskSchema>;
+export type TasksQuery = z.infer<typeof tasksQuerySchema>;
+
