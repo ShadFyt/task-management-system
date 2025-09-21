@@ -41,7 +41,9 @@ export class TasksService {
 
   /**
    * Finds all tasks for the authenticated user within their organization scope.
-   * Tasks are retrieved based on the user's organization and its children.
+   * Returns:
+   * - All work tasks within the organization
+   * - Only the user's own personal tasks
    * @param authUser - The authenticated user object.
    * @param orgId - The ID of the organization to find tasks for.
    * @returns A promise resolving to an array of tasks.
@@ -63,7 +65,7 @@ export class TasksService {
     const queryId = this.validateOrganizationAccess(authUser, orgId, 'read');
     baseAuditLogData.organizationId = queryId;
     this.auditLogsService.createAuditLog(baseAuditLogData);
-    return this.repo.findAllByOrgIds([queryId]);
+    return this.repo.findTasksForUser([queryId], authUser.id);
   }
 
   /**

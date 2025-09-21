@@ -23,6 +23,32 @@ export class TasksRepo {
     });
   }
 
+  /**
+   * Find tasks for a user with proper scoping:
+   * - All work tasks within the organization
+   * - Only the user's own personal tasks
+   * @param orgIds List of organization IDs to filter by
+   * @param userId User ID for personal task filtering
+   * @returns List of appropriately scoped tasks
+   */
+  async findTasksForUser(orgIds: string[], userId: string): Promise<Task[]> {
+    return this.repo.find({
+      where: [
+        // All work tasks in the organization
+        {
+          organizationId: In(orgIds),
+          type: 'work',
+        },
+        // Only user's own personal tasks in the organization
+        {
+          organizationId: In(orgIds),
+          type: 'personal',
+          userId: userId,
+        },
+      ],
+    });
+  }
+
   async createTask(taskData: Partial<Task>): Promise<Task> {
     try {
       const task = this.repo.create(taskData);
