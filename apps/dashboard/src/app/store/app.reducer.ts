@@ -1,6 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { AppState, initialAppState } from './app.state';
-import { setFilter, setSelectedOrganization } from './app.actions';
+import { setFilter, setSelectedOrganization, resetAppState } from './app.actions';
 
 export const appReducer = createReducer(
   initialAppState,
@@ -11,5 +11,6 @@ export const appReducer = createReducer(
   on(setSelectedOrganization, (state, { organizationId }) => ({
     ...state,
     selectedOrgId: organizationId,
-  }))
+  })),
+  on(resetAppState, () => initialAppState)
 );

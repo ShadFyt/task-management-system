@@ -1,11 +1,13 @@
 import { Injectable, inject, signal, effect, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { Store } from '@ngrx/store';
 import { firstValueFrom } from 'rxjs';
 import { LoginCredentials, AuthResponse } from '@task-management-system/auth';
 import { User } from '@task-management-system/data';
 import { API_BASE } from '../tokens';
 import { createPersistedTokenSignal } from '../utils/auth.utils';
+import { resetAppState } from '../../store';
 
 @Injectable({
   providedIn: 'root',
@@ -13,6 +15,7 @@ import { createPersistedTokenSignal } from '../utils/auth.utils';
 export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
+  private store = inject(Store);
 
   private readonly API_URL = inject(API_BASE);
 
@@ -61,6 +64,7 @@ export class AuthService {
   logout(): void {
     this.token.set(null);
     this.user.set(null);
+    this.store.dispatch(resetAppState());
     this.router.navigate(['/login']);
   }
 

@@ -10,3 +10,7 @@ export const setSelectedOrganization = createAction(
   '[App] Set Selected Organization',
   props<{ organizationId: string | null }>()
 );
+
+export const resetAppState = createAction(
+  '[App] Reset State'
+);
