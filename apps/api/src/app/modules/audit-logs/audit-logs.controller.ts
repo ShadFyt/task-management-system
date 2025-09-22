@@ -1,17 +1,12 @@
-import {
-  Controller,
-  Get,
-  Query,
-  UseGuards,
-  Request,
-  ParseIntPipe,
-  DefaultValuePipe,
-} from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Request } from '@nestjs/common';
 import { AuditLogsService } from './audit-logs.service';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/rbac.decorators';
 import { ApiBearerAuth } from '@nestjs/swagger';
-import { User } from '@task-management-system/data';
+import { auditLogsQuerySchema, User } from '@task-management-system/data';
+import { createZodDto } from 'nestjs-zod';
+
+class AuditLogsQuery extends createZodDto(auditLogsQuerySchema) {}
 
 /**
  * Controller for audit log operations
@@ -31,11 +26,8 @@ export class AuditLogsController {
   @ApiBearerAuth('JWT-auth')
   async getAuditLogs(
     @Request() req: { user: User },
-    @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
-    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number
+    @Query() query: AuditLogsQuery
   ) {
-    const { organization } = req.user;
-
-    return this.auditLogsService.getAuditLogs(organization.id, limit, offset);
+    return this.auditLogsService.getAuditLogs(req.user, query);
   }
 }

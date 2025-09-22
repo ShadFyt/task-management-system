@@ -1,9 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuditLog } from './audit-logs.entity';
 import { Organization } from '../organizations/organizations.entity';
 import { CreateAuditLogData } from './audit-log.types';
+import { AuditLogsQuery, User } from '@task-management-system/data';
+import { checkOrganizationPermission } from '@task-management-system/auth';
 
 @Injectable()
 export class AuditLogsService {
@@ -41,15 +43,35 @@ export class AuditLogsService {
    * @returns Promise<AuditLog[]> - Array of audit log entries
    */
   async getAuditLogs(
-    organizationId: string,
-    limit = 50,
-    offset = 0
+    authUser: User,
+    query: AuditLogsQuery
   ): Promise<AuditLog[]> {
+    const targetOrgId = query.orgId ?? authUser.organization.id;
+    const permissionResult = checkOrganizationPermission(
+      authUser,
+      targetOrgId,
+      'audit-log',
+      'read'
+    );
+    if (!permissionResult.hasAccess) {
+      this.createAuditLog({
+        action: 'organization_access_denied',
+        resourceType: 'audit-log',
+        organizationId: targetOrgId,
+        route: '/audit-logs',
+        metadata: {},
+        actorUserId: authUser.id,
+        actorEmail: authUser.email,
+        outcome: 'failure',
+        resourceId: '',
+      });
+      throw new ForbiddenException(permissionResult.errorMessage);
+    }
     const auditLogs = await this.auditLogRepo.find({
-      where: { organizationId },
+      where: { organizationId: targetOrgId },
       order: { at: 'DESC' },
-      take: limit,
-      skip: offset,
+      take: query.limit,
+      skip: query.offset,
       relations: ['organization'],
     });
 

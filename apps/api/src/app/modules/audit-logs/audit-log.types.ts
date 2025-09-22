@@ -8,7 +8,7 @@ export interface CreateAuditLogData {
     | 'read'
     | 'organization_access_denied';
 
-  resourceType: 'user' | 'organization' | 'task';
+  resourceType: 'user' | 'organization' | 'task' | 'audit-log';
 
   resourceId: string;
 
