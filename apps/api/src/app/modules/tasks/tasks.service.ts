@@ -8,7 +8,6 @@ import { TasksRepo } from './tasks.repo';
 import { Task } from './tasks.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Organization } from '../organizations/organizations.entity';
 import { User } from '../users/users.entity';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { CreateAuditLogData } from '../audit-logs/audit-log.types';
@@ -336,6 +335,15 @@ export class TasksService {
     };
   }
 
+  /**
+   * Logs an access denied event for a user attempting to perform an action on an organization.
+   *
+   * @param authUser - The authenticated user attempting the action.
+   * @param deniedOrgId - The ID of the organization the access attempt was denied for.
+   * @param action - The action the user attempted to perform.
+   * @param [reason] - Optional reason for access denial. Defaults to 'access_denied'.
+   * @return A promise that resolves when the access denial is logged.
+   */
   private async logAccessDenied(
     authUser: AuthUser,
     deniedOrgId: string,
@@ -366,6 +374,12 @@ export class TasksService {
     });
   }
 
+  /**
+   * Summarizes the permissions of the authenticated user.
+   *
+   * @param authUser - The authenticated user whose permissions are being summarized.
+   * @return An object containing the user's organization ID, the count of sub-organizations, and the IDs of the sub-organizations.
+   */
   private summarizeUserPermissions(authUser: AuthUser): object {
     return {
       organizationId: authUser.organization.id,
