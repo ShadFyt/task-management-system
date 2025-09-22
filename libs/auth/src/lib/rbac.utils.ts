@@ -81,11 +81,25 @@ export const checkPermissionByString = (
 ) => {
   const { action, entity, access } = parsePermissionString(permissionString);
 
-  return role.permissions.some(
-    (permission) =>
-      permission.entity === entity &&
-      permission.action === action &&
-      (!access || access.length === 0 || access.includes(permission.access))
+  return (
+    role.permissions?.some((permission) => {
+      if (permission.entity !== entity || permission.action !== action)
+        return false;
+
+      // If the caller didn’t specify access, action/entity match is enough.
+      if (!access || access.length === 0) return true;
+
+      // Normalize role’s granted access (CSV → array)
+      const granted = Array.isArray((permission as any).access)
+        ? ((permission as any).access as PermissionAccess[])
+        : (String(permission.access)
+            .split(',')
+            .map((a) => a.trim())
+            .filter(Boolean) as PermissionAccess[]);
+
+      // Pass if any requested access is included in the granted set
+      return access.some((a) => granted.includes(a));
+    }) ?? false
   );
 };
 
