@@ -21,10 +21,14 @@ jest.mock('../../common/helpers/rbac.repo-helpers', () => ({
 // Mock the auth helper
 jest.mock('@task-management-system/auth', () => ({
   checkPermission: jest.fn(),
+  checkOrganizationPermission: jest.fn(),
 }));
 
 import { canUserAccessTask } from '../../common/helpers/rbac.repo-helpers';
-import { checkPermission } from '@task-management-system/auth';
+import {
+  checkOrganizationPermission,
+  checkPermission,
+} from '@task-management-system/auth';
 import mockRole from '../roles/roles.mock';
 import mockOrganization from '../organizations/organizations.mock';
 
@@ -34,6 +38,11 @@ const mockedCanUserAccessTask = canUserAccessTask as jest.MockedFunction<
 const mockedCheckPermission = checkPermission as jest.MockedFunction<
   typeof checkPermission
 >;
+
+const mockedCheckOrganizationPermission =
+  checkOrganizationPermission as jest.MockedFunction<
+    typeof checkOrganizationPermission
+  >;
 
 describe('TasksService', () => {
   let service: TasksService;
@@ -98,6 +107,11 @@ describe('TasksService', () => {
     userRepo = unitRef.get<Repository<User>>(`${User.name}Repository`);
     auditLogsService = unitRef.get<AuditLogsService>(AuditLogsService);
 
+    mockedCheckOrganizationPermission.mockImplementation(() => ({
+      hasAccess: true,
+      errorMessage: '',
+      accessLevel: 'any',
+    }));
     // Reset all mocks before each test
     jest.clearAllMocks();
   });
@@ -132,6 +146,11 @@ describe('TasksService', () => {
 
     it('should throw ForbiddenException for inaccessible organization', async () => {
       const inaccessibleOrgId = 'other-org-123';
+      mockedCheckOrganizationPermission.mockImplementation(() => ({
+        hasAccess: false,
+        errorMessage: 'not accessible',
+        accessLevel: 'any',
+      }));
 
       await expect(
         service.findAllByUserOrg(mockAuthUser, inaccessibleOrgId)
@@ -369,23 +388,32 @@ describe('TasksService', () => {
       tasksRepo.findTasksForUser.mockResolvedValue(mockTasks);
       auditLogsService.createAuditLog.mockResolvedValue(undefined);
       mockedCheckPermission.mockReturnValue(true);
-
+      mockedCheckOrganizationPermission.mockImplementation(() => ({
+        hasAccess: true,
+        errorMessage: '',
+        accessLevel: 'any',
+      }));
       const result = await service.findAllByUserOrg(
         mockAuthUser,
         'sub-org-123'
       );
 
       expect(result).toEqual(mockTasks);
-      expect(mockedCheckPermission).toHaveBeenCalledWith(
-        mockRole,
+      expect(mockedCheckOrganizationPermission).toHaveBeenCalledWith(
+        mockAuthUser,
+        'sub-org-123',
         'task',
-        'read',
-        'any'
+        'read'
       );
     });
 
     it('should deny access to sub-organization without proper permissions', async () => {
       mockedCheckPermission.mockReturnValue(false);
+      mockedCheckOrganizationPermission.mockImplementation(() => ({
+        hasAccess: false,
+        errorMessage: 'Insufficient permissions to read in sub-organization',
+        accessLevel: 'any',
+      }));
 
       await expect(
         service.findAllByUserOrg(mockAuthUser, 'sub-org-123')
@@ -393,17 +421,6 @@ describe('TasksService', () => {
       await expect(
         service.findAllByUserOrg(mockAuthUser, 'sub-org-123')
       ).rejects.toThrow('Insufficient permissions to read in sub-organization');
-    });
-
-    it('should deny access to completely unrelated organization', async () => {
-      await expect(
-        service.findAllByUserOrg(mockAuthUser, 'unrelated-org-123')
-      ).rejects.toThrow(ForbiddenException);
-      await expect(
-        service.findAllByUserOrg(mockAuthUser, 'unrelated-org-123')
-      ).rejects.toThrow(
-        'Organization unrelated-org-123 is not accessible to user'
-      );
     });
   });
 });

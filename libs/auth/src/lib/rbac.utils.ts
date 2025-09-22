@@ -4,6 +4,7 @@ import {
   PermissionAction,
   PermissionEntity,
   Role,
+  User as AuthUser,
 } from '@task-management-system/data';
 
 /**
@@ -54,12 +55,17 @@ export const checkPermission = (
     console.error('No permissions found for role:', role);
     return false;
   }
-  return role.permissions.some(
-    (permission) =>
+  return role.permissions.some((permission) => {
+    const userAccess = permission.access
+      .split(',')
+      .filter(Boolean) as PermissionAccess[];
+
+    return (
       permission.entity === entity &&
       permission.action === action &&
-      permission.access.includes(access)
-  );
+      userAccess.includes(access)
+    );
+  });
 };
 
 /**
@@ -81,4 +87,62 @@ export const checkPermissionByString = (
       permission.action === action &&
       (!access || access.length === 0 || access.includes(permission.access))
   );
+};
+
+interface PermissionCheckResult {
+  hasAccess: boolean;
+  reason?: string;
+  errorMessage: string;
+}
+
+/**
+ * Checks if the authenticated user has the required permission to perform a specific action
+ * on a given organization or its sub-organizations.
+ *
+ * @param authUser - The authenticated user requesting access.
+ * @param targetOrgId - The ID of the organization being targeted.
+ * @param entity - The entity for which the permission is being checked.
+ * @param action - The desired action that the user wants to perform.
+ * @return An object indicating whether the user has access, and
+ * potentially including reasons and error messages if access is denied.
+ */
+export const checkOrganizationPermission = (
+  authUser: AuthUser,
+  targetOrgId: string,
+  entity: PermissionEntity,
+  action: PermissionAction
+): PermissionCheckResult => {
+  const { organization, subOrganizations } = authUser;
+
+  // Users own organization - always allowed
+  if (targetOrgId === organization.id) {
+    return {
+      hasAccess: true,
+      errorMessage: '',
+    };
+  }
+
+  const isSubOrg = subOrganizations.some((org) => org.id === targetOrgId);
+  if (!isSubOrg) {
+    return {
+      hasAccess: false,
+      reason: 'organization_not_accessible',
+      errorMessage: `Organization ${targetOrgId} is not accessible to user`,
+    };
+  }
+
+  // Check permissions for sub organization access
+  const hasPermission = checkPermission(authUser.role, entity, action, 'any');
+  if (!hasPermission) {
+    return {
+      hasAccess: false,
+      reason: 'insufficient_sub_org_permissions',
+      errorMessage: `Insufficient permissions to ${action} in sub-organization`,
+    };
+  }
+
+  return {
+    hasAccess: true,
+    errorMessage: '',
+  };
 };

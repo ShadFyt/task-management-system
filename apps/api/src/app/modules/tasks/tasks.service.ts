@@ -18,13 +18,7 @@ import {
   UpdateTask,
 } from '@task-management-system/data';
 import { User as AuthUser } from '@task-management-system/data';
-import { checkPermission } from '@task-management-system/auth';
-
-interface PermissionCheckResult {
-  hasAccess: boolean;
-  reason?: string;
-  errorMessage: string;
-}
+import { checkOrganizationPermission } from '@task-management-system/auth';
 
 @Injectable()
 export class TasksService {
@@ -266,9 +260,10 @@ export class TasksService {
     const targetOrgId = orgId ?? authUser.organization.id;
 
     // Check permission based on organization relationship
-    const permissionResult = this.checkOrganizationPermission(
+    const permissionResult = checkOrganizationPermission(
       authUser,
       targetOrgId,
+      'task',
       action
     );
 
@@ -283,56 +278,6 @@ export class TasksService {
     }
 
     return targetOrgId;
-  }
-
-  /**
-   * Checks if the authenticated user has the required permission to perform a specific action
-   * on a given organization or its sub-organizations.
-   *
-   * @param authUser - The authenticated user requesting access.
-   * @param targetOrgId - The ID of the organization being targeted.
-   * @param action - The desired action that the user wants to perform.
-   * @return An object indicating whether the user has access, and
-   * potentially including reasons and error messages if access is denied.
-   */
-  private checkOrganizationPermission(
-    authUser: AuthUser,
-    targetOrgId: string,
-    action: PermissionAction
-  ): PermissionCheckResult {
-    const { organization, subOrganizations } = authUser;
-
-    // Users own organization - always allowed
-    if (targetOrgId === organization.id) {
-      return {
-        hasAccess: true,
-        errorMessage: '',
-      };
-    }
-
-    const isSubOrg = subOrganizations.some((org) => org.id === targetOrgId);
-    if (!isSubOrg) {
-      return {
-        hasAccess: false,
-        reason: 'organization_not_accessible',
-        errorMessage: `Organization ${targetOrgId} is not accessible to user`,
-      };
-    }
-
-    // Check permissions for sub organization access
-    const hasPermission = checkPermission(authUser.role, 'task', action, 'any');
-    if (!hasPermission) {
-      return {
-        hasAccess: false,
-        reason: 'insufficient_sub_org_permissions',
-        errorMessage: `Insufficient permissions to ${action} in sub-organization`,
-      };
-    }
-
-    return {
-      hasAccess: true,
-      errorMessage: '',
-    };
   }
 
   /**
