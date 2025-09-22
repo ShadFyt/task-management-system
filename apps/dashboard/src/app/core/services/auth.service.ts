@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { firstValueFrom } from 'rxjs';
-import { LoginCredentials, AuthResponse } from '@task-management-system/auth';
+import { AuthBody, AuthResponse } from '@task-management-system/auth';
 import { User } from '@task-management-system/data';
 import { API_BASE } from '../tokens';
 import { createPersistedTokenSignal } from '../utils/auth.utils';
@@ -43,7 +43,7 @@ export class AuthService {
     });
   }
 
-  async login(credentials: LoginCredentials): Promise<AuthResponse> {
+  async login(credentials: AuthBody): Promise<AuthResponse> {
     this.loading.set(true);
     this.error.set(null);
     try {

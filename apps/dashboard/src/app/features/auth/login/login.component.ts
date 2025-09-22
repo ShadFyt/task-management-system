@@ -8,7 +8,7 @@ import {
 } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { LoginCredentials } from '@task-management-system/auth';
+import { AuthBody } from '@task-management-system/auth';
 
 @Component({
   selector: 'app-login',
@@ -120,7 +120,7 @@ export class Login {
     this.error.set(null);
 
     try {
-      const creds = this.loginForm.getRawValue() as LoginCredentials;
+      const creds = this.loginForm.getRawValue() as AuthBody;
       await this.authService.login(creds);
       const returnUrl =
         this.route.snapshot.queryParamMap.get('returnUrl') ?? '/dashboard';

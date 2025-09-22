@@ -125,7 +125,7 @@ export class TasksController {
    */
   @Delete(':id')
   @UseGuards(PermissionGuard)
-  @RequirePermission('delete:task:own')
+  @RequirePermission('delete:task:own,any')
   @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a task' })

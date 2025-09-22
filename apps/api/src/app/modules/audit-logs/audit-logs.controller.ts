@@ -10,8 +10,8 @@ import {
 import { AuditLogsService } from './audit-logs.service';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/rbac.decorators';
-import { AuthUser } from '../auth/auth.type';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { User } from '@task-management-system/data';
 
 /**
  * Controller for audit log operations
@@ -29,15 +29,13 @@ export class AuditLogsController {
   @Get()
   @RequirePermission('read:audit-log')
   @ApiBearerAuth('JWT-auth')
-
   async getAuditLogs(
-    @Request() req: { user: AuthUser },
+    @Request() req: { user: User },
     @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number
   ) {
-    const { organizationId } = req.user;
+    const { organization } = req.user;
 
-    return this.auditLogsService.getAuditLogs(organizationId, limit, offset);
+    return this.auditLogsService.getAuditLogs(organization.id, limit, offset);
   }
-
 }

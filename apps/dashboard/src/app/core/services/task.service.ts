@@ -3,11 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Store } from '@ngrx/store';
 import { firstValueFrom, catchError, finalize, throwError } from 'rxjs';
 import { API_BASE } from '../tokens';
-import {
-  CreateTaskRequest,
-  Task,
-  UpdateTaskRequest,
-} from '@task-management-system/data';
+import { CreateTask, Task, UpdateTask } from '@task-management-system/data';
 import { selectSelectedOrgId } from '../../store';
 
 /**
@@ -61,7 +57,7 @@ export class TaskService {
       if (orgId) {
         params = params.set('orgId', orgId);
       }
-      
+
       const tasks = await firstValueFrom(
         this.http.get<Task[]>(`${this.API_URL}/tasks`, { params })
       );
@@ -73,7 +69,7 @@ export class TaskService {
     }
   }
 
-  async createTask(input: CreateTaskRequest): Promise<Task> {
+  async createTask(input: CreateTask): Promise<Task> {
     this.mutating.set(true);
     this.error.set(null);
     const newTask = await firstValueFrom(
@@ -89,7 +85,7 @@ export class TaskService {
     return newTask;
   }
 
-  async updateTask(id: string, patch: UpdateTaskRequest): Promise<Task> {
+  async updateTask(id: string, patch: UpdateTask): Promise<Task> {
     this.mutating.set(true);
     this.error.set(null);
     const updated = await firstValueFrom(
