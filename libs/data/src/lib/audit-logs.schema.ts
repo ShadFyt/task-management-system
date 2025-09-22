@@ -1,4 +1,4 @@
-import { z } from 'zod/index';
+import { z } from 'zod';
 
 export const auditLogsQuerySchema = z.object({
   limit: z.number().optional().default(50),
