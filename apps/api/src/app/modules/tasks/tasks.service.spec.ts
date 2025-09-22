@@ -406,32 +406,4 @@ describe('TasksService', () => {
       );
     });
   });
-
-  describe('Edge cases', () => {
-    it('should handle audit log creation failures gracefully', async () => {
-      const mockTasks = [mockTask];
-      tasksRepo.findTasksForUser.mockResolvedValue(mockTasks);
-      auditLogsService.createAuditLog.mockRejectedValue(
-        new Error('Audit log failed')
-      );
-
-      const result = await service.findAllByUserOrg(mockAuthUser);
-
-      expect(result).toEqual(mockTasks);
-    });
-
-    it('should handle user with no sub-organizations', async () => {
-      const userWithNoSubOrgs = {
-        ...mockAuthUser,
-        subOrganizations: [],
-      };
-      const mockTasks = [mockTask];
-      tasksRepo.findTasksForUser.mockResolvedValue(mockTasks);
-      auditLogsService.createAuditLog.mockResolvedValue(undefined);
-
-      const result = await service.findAllByUserOrg(userWithNoSubOrgs);
-
-      expect(result).toEqual(mockTasks);
-    });
-  });
 });

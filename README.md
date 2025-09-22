@@ -531,33 +531,3 @@ npm run lint                 # Lint all projects
 npm run format               # Format code with Prettier
 
 ```
-
-### Project Structure
-```
-apps/
-├── api/src/app/
-│   ├── modules/             # Feature modules
-│   │   ├── auth/           # Authentication module
-│   │   ├── users/          # User management
-│   │   ├── tasks/          # Task management
-│   │   ├── organizations/  # Organization management
-│   │   ├── roles/          # Role management
-│   │   ├── permissions/    # Permission management
-│   │   └── audit-logs/     # Audit logging
-│   ├── common/             # Shared utilities
-│   │   ├── decorators/     # Custom decorators
-│   │   ├── guards/         # Auth guards
-│   │   └── filters/        # Exception filters
-│   └── core/               # Core services
-│       ├── database-seeder.service.ts
-│       └── global-jwt-auth.guard.ts
-└── dashboard/src/app/
-    ├── core/               # Core services
-    │   ├── services/       # Angular services
-    │   ├── interceptors/   # HTTP interceptors
-    │   └── guards/         # Route guards
-    ├── features/           # Feature modules
-    │   └── dashboard/      # Main dashboard
-    ├── shared/             # Shared components
-    └── store/              # NgRx store
-```

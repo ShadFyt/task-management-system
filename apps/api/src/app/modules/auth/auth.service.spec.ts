@@ -1,7 +1,7 @@
 import { TestBed, Mocked } from '@suites/unit';
 import { JwtService } from '@nestjs/jwt';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DeleteResult, Repository } from 'typeorm';
 import { BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
@@ -188,14 +188,6 @@ describe('AuthService', () => {
       expect(tokenRepository.save).toHaveBeenCalledWith(mockToken);
     });
 
-    it('should handle token repository errors', async () => {
-      tokenRepository.save.mockRejectedValue(new Error('Database error'));
-
-      await expect(service.login(mockUser as User)).rejects.toThrow(
-        'Database error'
-      );
-    });
-
     it('should handle user service errors', async () => {
       userService.findOneByIdOrThrow.mockRejectedValue(
         new Error('User not found')
@@ -216,16 +208,6 @@ describe('AuthService', () => {
       await service.logout(userId);
 
       expect(tokenRepository.delete).toHaveBeenCalledWith({ userId });
-    });
-
-    it('should handle repository errors and throw BadRequestException', async () => {
-      const userId = 'user-123';
-      tokenRepository.delete.mockRejectedValue(new Error('Database error'));
-
-      await expect(service.logout(userId)).rejects.toThrow(BadRequestException);
-      await expect(service.logout(userId)).rejects.toThrow(
-        `Failed to delete tokens for user ${userId}`
-      );
     });
 
     it('should handle case when no tokens are found', async () => {

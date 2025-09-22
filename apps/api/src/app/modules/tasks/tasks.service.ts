@@ -366,12 +366,7 @@ export class TasksService {
       },
     };
 
-    this.auditLogsService.createAuditLog(auditLogData).catch((error) => {
-      this.logger.error('Audit log creation failed', {
-        error,
-        auditData: auditLogData,
-      });
-    });
+    this.auditLogsService.createAuditLog(auditLogData);
   }
 
   /**
