@@ -3,7 +3,14 @@ import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
 import { TaskService } from '../../../../core/services/task.service';
 import { Task } from '@task-management-system/data';
-import { LucideAngularModule, TrashIcon, HourglassIcon } from 'lucide-angular';
+import {
+  LucideAngularModule,
+  TrashIcon,
+  HourglassIcon,
+  ArrowLeftIcon,
+  PlayIcon,
+  CircleCheckBig,
+} from 'lucide-angular';
 import { AuthService } from '../../../../core/services/auth.service';
 import { checkPermission } from '@task-management-system/auth';
 import { selectCurrentFilter } from '../../../../store';
@@ -55,26 +62,35 @@ import { selectCurrentFilter } from '../../../../store';
             @if (status() !== 'todo') {
             <button
               (click)="changeStatus(task, 'todo')"
-              class="text-yellow-600 hover:text-yellow-800 font-medium px-2 py-1 rounded bg-yellow-50 dark:bg-yellow-900/20"
+              class="text-yellow-600 hover:text-yellow-800 font-medium px-2 py-1 rounded bg-yellow-50 dark:bg-yellow-900/20 flex items-center gap-1"
               title="Move to To Do"
             >
-              ← To Do
+              <lucide-angular
+                [img]="ArrowLeftIcon"
+                class="w-4 h-4"
+              ></lucide-angular>
+              <span class="text-sm">To Do</span>
             </button>
             } @if (status() !== 'in-progress') {
             <button
               (click)="changeStatus(task, 'in-progress')"
-              class="text-blue-600 hover:text-blue-800 font-medium px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/20"
+              class="text-blue-600 hover:text-blue-800 font-medium px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/20 flex items-center gap-1"
               title="Move to In Progress"
             >
-              ↔ Progress
+              <lucide-angular [img]="PlayIcon" class="w-4 h-4"></lucide-angular>
+              <span class="text-sm">Progress</span>
             </button>
             } @if (status() !== 'done') {
             <button
               (click)="changeStatus(task, 'done')"
-              class="text-green-600 hover:text-green-800 font-medium px-2 py-1 rounded bg-green-50 dark:bg-green-900/20"
+              class="text-green-600 hover:text-green-800 font-medium px-2 py-1 rounded bg-green-50 dark:bg-green-900/20 flex items-center gap-1"
               title="Move to Done"
             >
-              → Done
+              <lucide-angular
+                [img]="CircleCheckBig"
+                class="w-4 h-4"
+              ></lucide-angular>
+              <span class="text-sm">Done</span>
             </button>
             }
           </div>
@@ -190,4 +206,7 @@ export class TaskList {
 
   protected readonly TrashIcon = TrashIcon;
   protected readonly HourglassIcon = HourglassIcon;
+  protected readonly ArrowLeftIcon = ArrowLeftIcon;
+  protected readonly PlayIcon = PlayIcon;
+  protected readonly CircleCheckBig = CircleCheckBig;
 }
