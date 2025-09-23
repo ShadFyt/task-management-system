@@ -1,5 +1,9 @@
 import { Route } from '@angular/router';
-import { authGuard, guestGuard } from './core/guards/auth.guard';
+import {
+  authGuard,
+  guestGuard,
+  permissionGuard,
+} from './core/guards/auth.guard';
 
 export const appRoutes: Route[] = [
   {
@@ -20,6 +24,15 @@ export const appRoutes: Route[] = [
         (m) => m.Dashboard
       ),
     canActivate: [authGuard],
+  },
+  {
+    path: 'audit-logs',
+    loadComponent: () =>
+      import('./features/audit-logs/audit-logs.component').then(
+        (m) => m.AuditLogs
+      ),
+    canActivate: [permissionGuard],
+    data: { permission: 'read:audit-logs' },
   },
   {
     path: '**',
