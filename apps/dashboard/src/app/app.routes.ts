@@ -18,6 +18,13 @@ export const appRoutes: Route[] = [
     pathMatch: 'full',
   },
   {
+    path: 'unauthorized',
+    loadComponent: () =>
+      import('./features/auth/unauthorized/unauthorized.component').then(
+        (m) => m.Unauthorized
+      ),
+  },
+  {
     path: 'login',
     loadComponent: () =>
       import('./features/auth/login/login.component').then((m) => m.Login),

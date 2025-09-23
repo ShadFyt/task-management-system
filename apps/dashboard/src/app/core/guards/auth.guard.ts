@@ -94,7 +94,6 @@ export const permissionGuard: CanActivateFn = async (route, state) => {
 
     if (!hasPermission) {
       console.info('User does not have permission for route:', state.url);
-      // TODO: create unauthorized component
       router.navigate(['/unauthorized'], {
         queryParams: { returnUrl: state.url },
       });
