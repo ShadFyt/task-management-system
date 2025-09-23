@@ -1,10 +1,16 @@
-import { Route } from '@angular/router';
+import { Data, Route } from '@angular/router';
 import {
   authGuard,
   guestGuard,
   permissionGuard,
 } from './core/guards/auth.guard';
+import { PermissionString } from '@task-management-system/auth';
 
+interface AppRouteData extends Data {
+  permission?: PermissionString;
+}
+
+export type AppRoute = Omit<Route, 'data'> & { data?: AppRouteData };
 export const appRoutes: Route[] = [
   {
     path: '',
@@ -32,10 +38,10 @@ export const appRoutes: Route[] = [
         (m) => m.AuditLogs
       ),
     canActivate: [permissionGuard],
-    data: { permission: 'read:audit-logs' },
+    data: { permission: 'read:audit-log' },
   },
   {
     path: '**',
     redirectTo: '/dashboard',
   },
-];
+] satisfies AppRoute[];
