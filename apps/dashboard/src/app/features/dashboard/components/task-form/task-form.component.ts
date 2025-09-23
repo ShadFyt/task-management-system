@@ -120,12 +120,16 @@ export class TaskForm {
   private fb = inject(FormBuilder);
   private taskService = inject(TaskService);
   private authService = inject(AuthService);
-
   taskForm: FormGroup;
+
+  taskCreated = output<void>();
+  cancelled = output<void>();
+
   private readonly _loading = signal(false);
   readonly loading = this._loading.asReadonly();
   private readonly _error = signal<string | null>(null);
   readonly error = this._error.asReadonly();
+
   readonly canSubmit = computed(() => this.taskForm.valid && !this.loading());
   hasAnyPermission = computed(() => {
     const user = this.authService.user();
@@ -139,9 +143,6 @@ export class TaskForm {
       ? 'form-input'
       : 'form-input opacity-50 cursor-not-allowed pointer-events-none';
   });
-
-  taskCreated = output<void>();
-  cancelled = output<void>();
 
   constructor() {
     this.taskForm = this.fb.group({
