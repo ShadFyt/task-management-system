@@ -89,7 +89,7 @@ export const checkPermissionByString = (
       // If the caller didn’t specify access, action/entity match is enough.
       if (!access || access.length === 0) return true;
 
-      // Normalize role’s granted access (CSV → array)
+      // Normalize role’s granted access
       const granted = Array.isArray((permission as any).access)
         ? ((permission as any).access as PermissionAccess[])
         : (String(permission.access)

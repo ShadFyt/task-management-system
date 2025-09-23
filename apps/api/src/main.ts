@@ -5,7 +5,6 @@
 
 import {
   Logger,
-  ValidationPipe,
   ClassSerializerInterceptor,
 } from '@nestjs/common';
 import { NestFactory, Reflector } from '@nestjs/core';
