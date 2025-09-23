@@ -489,6 +489,11 @@ Response:
 
 ## Future Considerations
 
+### UI Enhancements
+- Implement a more route-based approach for task management with dedicated routes for viewing, creating, and updating tasks and adding permissionGuard to them.
+- Add toast notifications for improved user experience and feedback
+- Add a working audit logs viewing component
+
 ### Advanced Role Delegation
 - **Dynamic Role Assignment**: Allow users to have multiple roles
 - **Temporary Permissions**: Time-bound permission grants
