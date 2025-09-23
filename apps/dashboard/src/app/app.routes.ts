@@ -44,7 +44,7 @@ export const appRoutes: Route[] = [
       import('./features/audit-logs/audit-logs.component').then(
         (m) => m.AuditLogs
       ),
-    canActivate: [permissionGuard],
+    canActivate: [authGuard, permissionGuard],
     data: { permission: 'read:audit-log' },
   },
   {
