@@ -19,21 +19,24 @@ export class AuditLogService {
 
   readonly logs = signal<AuditLog[]>([]);
 
-  async load() {
+  async load(orgId?: string | null) {
     this.loading.set(true);
     this.error.set(null);
     try {
       const query = {
-        orgId: this.selectedOrgId() ?? undefined,
+        orgId: orgId,
         limit: 50,
         offset: 0,
       };
 
-      const params = new HttpParams()
-        .set('limit', query.limit)
-        .set('offset', query.offset);
-      if (query.orgId) {
-        params.set('orgId', query.orgId);
+      console.log('Loading audit logs', query.orgId);
+
+
+      let params = new HttpParams()
+        .set('limit', String(query.limit))
+        .set('offset', String(query.offset));
+      if (orgId) {
+        params = params.set('orgId', orgId);
       }
 
       const dbLogs = await firstValueFrom(
@@ -51,8 +54,7 @@ export class AuditLogService {
 
   constructor() {
     effect(async () => {
-      this.selectedOrgId();
-      await this.load();
+      await this.load(this.selectedOrgId());
     });
   }
 }

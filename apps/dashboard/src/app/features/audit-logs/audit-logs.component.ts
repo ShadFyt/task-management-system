@@ -1,7 +1,8 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuditLog } from '@task-management-system/data';
 import { AuditLogService } from '../../core/services/audit-log.service';
+import { OrganizationSelector } from '../dashboard/components/organization-selector/organization-selector.component';
 
 interface AuditMetadataEntry {
   readonly key: string;
@@ -36,7 +37,7 @@ const stringifyMetadataValue = (metadataValue: unknown): string => {
 @Component({
   selector: 'app-audit-logs',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, OrganizationSelector],
   template: `
     <section class="flex flex-col gap-6">
       <header class="flex flex-wrap items-end justify-between gap-4">
@@ -46,6 +47,8 @@ const stringifyMetadataValue = (metadataValue: unknown): string => {
             Review recent activity across your organization.
           </p>
         </div>
+        <app-organization-selector></app-organization-selector>
+
         <span class="text-sm font-medium text-slate-500">
           {{ entriesCount() }} entries
         </span>
