@@ -4,7 +4,6 @@ import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/rbac.decorators';
 import { ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import {
-  auditLogsQuerySchema,
   limitQuerySchema,
   offsetQuerySchema,
   orgIdQuerySchema,

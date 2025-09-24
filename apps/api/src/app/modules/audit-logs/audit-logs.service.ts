@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { AuditLog } from './audit-logs.entity';
 import { Organization } from '../organizations/organizations.entity';
 import { CreateAuditLogData } from './audit-log.types';
-import { AuditLogsQuery, User } from '@task-management-system/data';
+import { User } from '@task-management-system/data';
 import { checkOrganizationPermission } from '@task-management-system/auth';
 
 @Injectable()
@@ -44,7 +44,11 @@ export class AuditLogsService {
    */
   async getAuditLogs(
     authUser: User,
-    query: AuditLogsQuery
+    query: {
+      orgId?: string;
+      limit?: number;
+      offset?: number;
+    }
   ): Promise<AuditLog[]> {
     const targetOrgId = query.orgId ?? authUser.organization.id;
     const permissionResult = checkOrganizationPermission(
