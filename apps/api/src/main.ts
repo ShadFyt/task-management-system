@@ -3,11 +3,8 @@
  * This is only a minimal backend to get started.
  */
 
-import {
-  Logger,
-  ClassSerializerInterceptor,
-} from '@nestjs/common';
-import { NestFactory, Reflector } from '@nestjs/core';
+import { Logger } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { DatabaseSeederService } from './app/core/database-seeder.service';
@@ -54,12 +51,6 @@ async function bootstrap() {
   SwaggerModule.setup('docs', app, cleanupOpenApiDoc(documentFactory()));
   /*  const globalPrefix = 'api';  not sure how to add global prefix as adding api/docs to swagger url doesn't work
   app.setGlobalPrefix(globalPrefix);*/
-
-  app.useGlobalInterceptors(
-    new ClassSerializerInterceptor(app.get(Reflector), {
-      excludeExtraneousValues: true,
-    })
-  );
 
   const port = process.env.PORT || 3000;
   await app.listen(port);

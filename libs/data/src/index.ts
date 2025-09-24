@@ -5,3 +5,4 @@ export * from './lib/role.schema';
 export * from './lib/user.schema';
 export * from './lib/audit-logs.schema';
 export * from './lib/task.schema';
+export * from './lib/query.schema';

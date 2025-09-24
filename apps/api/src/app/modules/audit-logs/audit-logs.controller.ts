@@ -2,11 +2,19 @@ import { Controller, Get, Query, UseGuards, Request } from '@nestjs/common';
 import { AuditLogsService } from './audit-logs.service';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/rbac.decorators';
-import { ApiBearerAuth } from '@nestjs/swagger';
-import { auditLogsQuerySchema, User } from '@task-management-system/data';
+import { ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  auditLogsQuerySchema,
+  limitQuerySchema,
+  offsetQuerySchema,
+  orgIdQuerySchema,
+  User,
+} from '@task-management-system/data';
 import { createZodDto } from 'nestjs-zod';
 
-class AuditLogsQuery extends createZodDto(auditLogsQuerySchema) {}
+class orgIdQueryDto extends createZodDto(orgIdQuerySchema) {}
+class limitQueryDto extends createZodDto(limitQuerySchema) {}
+class offsetQueryDto extends createZodDto(offsetQuerySchema) {}
 
 /**
  * Controller for audit log operations
@@ -26,8 +34,14 @@ export class AuditLogsController {
   @ApiBearerAuth('JWT-auth')
   async getAuditLogs(
     @Request() req: { user: User },
-    @Query() query: AuditLogsQuery
+    @Query() orgId: orgIdQueryDto,
+    @Query() limit: limitQueryDto,
+    @Query() offset: offsetQueryDto
   ) {
-    return this.auditLogsService.getAuditLogs(req.user, query);
+    return this.auditLogsService.getAuditLogs(req.user, {
+      orgId: orgId.orgId,
+      limit: limit.limit,
+      offset: offset.offset,
+    });
   }
 }
