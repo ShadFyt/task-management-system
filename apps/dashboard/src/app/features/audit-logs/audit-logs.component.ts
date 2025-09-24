@@ -1,6 +1,7 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuditLog } from '@task-management-system/data';
+import { AuditLogService } from '../../core/services/audit-log.service';
 
 interface AuditMetadataEntry {
   readonly key: string;
@@ -31,24 +32,6 @@ const stringifyMetadataValue = (metadataValue: unknown): string => {
     return METADATA_ERROR;
   }
 };
-
-const MOCK_AUDIT_LOGS: readonly AuditLog[] = [
-  {
-    id: 'b23442bf-b8de-46fa-acf6-7e7dd6b538e5',
-    actorUserId: '078c0d32-8c9a-40dd-bc77-b36a0b484979',
-    actorEmail: 'admin@example.com',
-    organizationId: '5967f41b-1513-44fd-88a8-505a658760d7',
-    resourceType: 'Task',
-    resourceId: '7ba5187c-7c10-4f12-aeea-5e3eec1c1d21',
-    action: 'Created new project',
-    outcome: 'success',
-    metadata: {
-      content: 'new task',
-      tile: 'audit logs',
-    },
-    at: new Date('2024-08-10T09:42:00Z'),
-  },
-];
 
 @Component({
   selector: 'app-audit-logs',
@@ -157,6 +140,7 @@ const MOCK_AUDIT_LOGS: readonly AuditLog[] = [
   `,
 })
 export class AuditLogs {
+  protected readonly auditLogService = inject(AuditLogService);
   protected readonly TABLE_CLASSES = {
     table: 'min-w-full divide-y divide-slate-200',
     thBase:
@@ -168,10 +152,8 @@ export class AuditLogs {
     td: 'px-6 py-4',
   };
 
-  protected readonly logs = signal<readonly AuditLog[]>(MOCK_AUDIT_LOGS);
-
   protected readonly displayLogs = computed<readonly AuditLogDisplay[]>(() =>
-    this.logs().map((log) => {
+    this.auditLogService.logs().map((log) => {
       const metadataEntries = Object.entries(log.metadata).map(
         ([key, value]): AuditMetadataEntry => ({
           key,
