@@ -1,5 +1,4 @@
 import { TestBed, Mocked } from '@suites/unit';
-import { Repository } from 'typeorm';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 
 import { TasksService } from './tasks.service';

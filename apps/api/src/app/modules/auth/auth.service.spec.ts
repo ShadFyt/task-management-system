@@ -1,8 +1,7 @@
 import { TestBed, Mocked } from '@suites/unit';
 import { JwtService } from '@nestjs/jwt';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { DeleteResult, Repository } from 'typeorm';
-import { BadRequestException } from '@nestjs/common';
+import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
 import { AuthService } from './auth.service';
