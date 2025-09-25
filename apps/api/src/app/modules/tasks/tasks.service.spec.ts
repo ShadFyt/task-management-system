@@ -13,18 +13,12 @@ import {
   User as AuthUser,
 } from '@task-management-system/data';
 
-// Mock the RBAC helper
-jest.mock('../../common/helpers/rbac.repo-helpers', () => ({
-  canUserAccessTask: jest.fn(),
-}));
-
 // Mock the auth helper
 jest.mock('@task-management-system/auth', () => ({
   checkPermission: jest.fn(),
   checkOrganizationPermission: jest.fn(),
 }));
 
-import { canUserAccessTask } from '../../common/helpers/rbac.repo-helpers';
 import {
   checkOrganizationPermission,
   checkPermission,
@@ -32,9 +26,6 @@ import {
 import mockRole from '../roles/roles.mock';
 import mockOrganization from '../organizations/organizations.mock';
 
-const mockedCanUserAccessTask = canUserAccessTask as jest.MockedFunction<
-  typeof canUserAccessTask
->;
 const mockedCheckPermission = checkPermission as jest.MockedFunction<
   typeof checkPermission
 >;
@@ -47,7 +38,6 @@ const mockedCheckOrganizationPermission =
 describe('TasksService', () => {
   let service: TasksService;
   let tasksRepo: Mocked<TasksRepo>;
-  let userRepo: Mocked<Repository<User>>;
   let auditLogsService: Mocked<AuditLogsService>;
 
   // Test data fixtures
@@ -104,7 +94,6 @@ describe('TasksService', () => {
     service = unit;
     tasksRepo = unitRef.get<TasksRepo>(TasksRepo);
 
-    userRepo = unitRef.get<Repository<User>>(`${User.name}Repository`);
     auditLogsService = unitRef.get<AuditLogsService>(AuditLogsService);
 
     mockedCheckOrganizationPermission.mockImplementation(() => ({
@@ -240,9 +229,11 @@ describe('TasksService', () => {
   });
 
   describe('updateTask', () => {
+    let canAccessTaskSpy: jest.SpyInstance;
     beforeEach(() => {
+      canAccessTaskSpy = jest.spyOn(service as any, 'canUserAccessTask');
       auditLogsService.createAuditLog.mockResolvedValue(undefined);
-      mockedCanUserAccessTask.mockResolvedValue(true);
+      canAccessTaskSpy.mockResolvedValue(true);
     });
 
     it('should update task successfully when user has access', async () => {
@@ -262,9 +253,8 @@ describe('TasksService', () => {
         'task-123',
         mockUpdateTaskDto
       );
-      expect(mockedCanUserAccessTask).toHaveBeenCalledWith(
-        userRepo,
-        'user-123',
+      expect(canAccessTaskSpy).toHaveBeenCalledWith(
+        mockAuthUser,
         mockTask,
         'update:task:own,any'
       );
@@ -289,7 +279,10 @@ describe('TasksService', () => {
 
     it('should throw ForbiddenException when user lacks access', async () => {
       tasksRepo.findById.mockResolvedValue(mockTask);
-      mockedCanUserAccessTask.mockResolvedValue(false);
+      canAccessTaskSpy.mockReturnValue(false);
+      jest
+        .spyOn(service as any, 'validateOrganizationAccess')
+        .mockImplementation(() => mockTask.organizationId);
 
       await expect(
         service.updateTask(mockAuthUser, 'task-123', mockUpdateTaskDto)
@@ -317,9 +310,12 @@ describe('TasksService', () => {
   });
 
   describe('deleteTask', () => {
+    let canAccessTaskSpy: jest.SpyInstance;
+
     beforeEach(() => {
+      canAccessTaskSpy = jest.spyOn(service as any, 'canUserAccessTask');
       auditLogsService.createAuditLog.mockResolvedValue(undefined);
-      mockedCanUserAccessTask.mockResolvedValue(true);
+      canAccessTaskSpy.mockResolvedValue(true);
     });
 
     it('should delete task successfully when user has access', async () => {
@@ -330,9 +326,8 @@ describe('TasksService', () => {
 
       expect(tasksRepo.findById).toHaveBeenCalledWith('task-123');
       expect(tasksRepo.deleteTask).toHaveBeenCalledWith('task-123');
-      expect(mockedCanUserAccessTask).toHaveBeenCalledWith(
-        userRepo,
-        'user-123',
+      expect(canAccessTaskSpy).toHaveBeenCalledWith(
+        mockAuthUser,
         mockTask,
         'delete:task:own,any'
       );
@@ -357,7 +352,7 @@ describe('TasksService', () => {
 
     it('should throw ForbiddenException when user lacks access', async () => {
       tasksRepo.findById.mockResolvedValue(mockTask);
-      mockedCanUserAccessTask.mockResolvedValue(false);
+      canAccessTaskSpy.mockReturnValue(false);
 
       await expect(
         service.deleteTask(mockAuthUser, 'task-123')

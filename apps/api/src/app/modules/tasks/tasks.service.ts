@@ -11,14 +11,19 @@ import { Repository } from 'typeorm';
 import { User } from '../users/users.entity';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { CreateAuditLogData } from '../audit-logs/audit-log.types';
-import { canUserAccessTask } from '../../common/helpers/rbac.repo-helpers';
 import {
   CreateTask,
   PermissionAction,
   UpdateTask,
 } from '@task-management-system/data';
 import { User as AuthUser } from '@task-management-system/data';
-import { checkOrganizationPermission } from '@task-management-system/auth';
+import {
+  checkOrganizationPermission,
+  checkPermission,
+  checkPermissionByString,
+  parsePermissionString,
+  PermissionString,
+} from '@task-management-system/auth';
 
 @Injectable()
 export class TasksService {
@@ -155,12 +160,12 @@ export class TasksService {
     this.validateOrganizationAccess(authUser, task.organizationId, 'update');
 
     // Check if user can access this task
-    const canAccess = await canUserAccessTask(
-      this.userRepo,
-      id,
+    const canAccess = this.canUserAccessTask(
+      authUser,
       task,
       'update:task:own,any'
     );
+    console.log('canAccess', canAccess);
     if (!canAccess) {
       this.logger.warn(
         `User ${id} attempted to update task ${taskId} without permission`
@@ -223,9 +228,8 @@ export class TasksService {
     this.validateOrganizationAccess(authUser, task.organizationId, 'delete');
 
     // Check if user can access this task
-    const canAccess = await canUserAccessTask(
-      this.userRepo,
-      id,
+    const canAccess = this.canUserAccessTask(
+      authUser,
       task,
       'delete:task:own,any'
     );
@@ -242,6 +246,62 @@ export class TasksService {
 
     await this.repo.deleteTask(taskId);
     this.auditLogsService.createAuditLog(baseAuditLogData);
+  }
+
+  /**
+   * Checks if the user can access the task based on the required permission.
+   * @param user - The authenticated user
+   * @param task - The task with user and organization relations
+   * @param requiredPermission - The permission string required to access the task
+   * @returns true if the user has access, false otherwise
+   */
+  private canUserAccessTask(
+    user: AuthUser,
+    task: Task, // Task with user and organization relations
+    requiredPermission: PermissionString
+  ) {
+    if (!user || !user.role) {
+      return false;
+    }
+
+    // Check if user has the required permission
+    const hasPermission = checkPermissionByString(
+      user.role,
+      requiredPermission
+    );
+    if (!hasPermission) {
+      return false;
+    }
+
+    const { access, entity, action } =
+      parsePermissionString(requiredPermission);
+
+    // If no access is specified, allow access (permission without scope)
+    if (!access || access.length === 0) {
+      return true;
+    }
+
+    // Check if permission includes "own" access and user owns the task
+    if (access.includes('own') && task.userId === user.id) {
+      return true;
+    }
+
+    // Should hasAnyPermission be allowed for personal tasks? maybe we should prevent this
+    // If permission includes "any" user is admin or owner
+    const hasAnyPermission = checkPermission(user.role, entity, action, 'any');
+
+    // Check if user permission includes "any" access and user is in same organization scope
+    if (hasAnyPermission) {
+      // Get user's organization and its children
+      const userOrgIds = [user.organization.id];
+      if (user.subOrganizations) {
+        userOrgIds.push(...user.subOrganizations.map((org) => org.id));
+      }
+
+      return userOrgIds.includes(task.organizationId);
+    }
+
+    return false;
   }
 
   /**
