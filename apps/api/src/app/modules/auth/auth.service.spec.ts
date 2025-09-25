@@ -168,7 +168,7 @@ describe('AuthService', () => {
           },
           subOrganizations: [],
         }),
-        { expiresIn: '15m' }
+        { expiresIn: '1h' }
       );
 
       // Refresh token call
