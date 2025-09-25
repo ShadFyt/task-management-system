@@ -28,14 +28,14 @@ import {
   createTaskSchema,
   Task,
   taskSchema,
-  orgQuerySchema,
   updateTaskSchema,
+  orgIdQuerySchema,
 } from '@task-management-system/data';
 
 class CreateTaskDto extends createZodDto(createTaskSchema) {}
 class TaskDto extends createZodDto(taskSchema) {}
 class UpdateTaskDto extends createZodDto(updateTaskSchema) {}
-class OrgQueryDto extends createZodDto(orgQuerySchema) {}
+class orgIdQueryDto extends createZodDto(orgIdQuerySchema) {}
 
 @ApiTags('tasks')
 @Controller('tasks')
@@ -55,7 +55,7 @@ export class TasksController {
   @ApiResponse({ status: 200, description: 'List of tasks', type: [TaskDto] })
   async findAllByUserOrg(
     @User() user: AuthUser,
-    @Query() query: OrgQueryDto
+    @Query() query: orgIdQueryDto
   ): Promise<Task[]> {
     const tasks = await this.service.findAllByUserOrg(user, query.orgId);
     return taskSchema.array().parse(tasks);
@@ -84,7 +84,7 @@ export class TasksController {
   async createTask(
     @User() user: AuthUser,
     @Body() dto: CreateTaskDto,
-    @Query() query: OrgQueryDto
+    @Query() query: orgIdQueryDto
   ): Promise<Task> {
     const task = await this.service.createTask(user, dto, query.orgId);
     return taskSchema.parse(task);

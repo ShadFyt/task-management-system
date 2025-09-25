@@ -72,8 +72,13 @@ export class TaskService {
   async createTask(input: CreateTask): Promise<Task> {
     this.mutating.set(true);
     this.error.set(null);
+    let params = new HttpParams();
+    const orgId = this.selectedOrgId();
+    if (orgId) {
+      params = params.set('orgId', orgId);
+    }
     const newTask = await firstValueFrom(
-      this.http.post<Task>(`${this.API_URL}/tasks`, input).pipe(
+      this.http.post<Task>(`${this.API_URL}/tasks`, input, { params }).pipe(
         catchError((err) => {
           this.error.set('Failed to create task');
           return throwError(() => err);
