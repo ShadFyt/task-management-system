@@ -6,6 +6,7 @@ import { Organization } from '../organizations/organizations.entity';
 import { CreateAuditLogData } from './audit-log.types';
 import { User } from '@task-management-system/data';
 import { checkOrganizationPermission } from '@task-management-system/auth';
+import { GetAuditLogsResponse } from '@task-management-system/data';
 
 @Injectable()
 export class AuditLogsService {
@@ -37,20 +38,19 @@ export class AuditLogsService {
 
   /**
    * Retrieves audit logs for an organization with optional filtering
-   * @param organizationId - The organization ID
+   * @param authUser
+   * @param orgId - organization id to filter by
    * @param limit - Maximum number of records to return
    * @param offset - Number of records to skip
    * @returns Promise<AuditLog[]> - Array of audit log entries
    */
   async getAuditLogs(
     authUser: User,
-    query: {
-      orgId?: string;
-      limit?: number;
-      offset?: number;
-    }
-  ): Promise<AuditLog[]> {
-    const targetOrgId = query.orgId ?? authUser.organization.id;
+    limit = 50,
+    offset = 0,
+    orgId?: string
+  ): Promise<GetAuditLogsResponse> {
+    const targetOrgId = orgId ?? authUser.organization.id;
     const permissionResult = checkOrganizationPermission(
       authUser,
       targetOrgId,
@@ -71,18 +71,21 @@ export class AuditLogsService {
       });
       throw new ForbiddenException(permissionResult.errorMessage);
     }
-    const auditLogs = await this.auditLogRepo.find({
+    const [auditLogs, total] = await this.auditLogRepo.findAndCount({
       where: { organizationId: targetOrgId },
       order: { at: 'DESC' },
-      take: query.limit,
-      skip: query.offset,
+      take: limit,
+      skip: offset,
       relations: ['organization'],
     });
 
     // Parse metadata back to objects for response
-    return auditLogs.map((log) => ({
-      ...log,
-      metadata: log.metadata ? JSON.parse(log.metadata) : null,
-    }));
+    return {
+      logs: auditLogs.map((log) => ({
+        ...log,
+        metadata: log.metadata ? JSON.parse(log.metadata) : null,
+      })),
+      total,
+    };
   }
 }

@@ -14,3 +14,9 @@ export const auditLogSchema = z.object({
 });
 
 export type AuditLog = z.infer<typeof auditLogSchema>;
+
+export const getAuditLogsResponseSchema = z.object({
+  logs: z.array(auditLogSchema),
+  total: z.number(),
+});
+export type GetAuditLogsResponse = z.infer<typeof getAuditLogsResponseSchema>;
