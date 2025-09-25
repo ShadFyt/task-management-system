@@ -37,13 +37,13 @@ class TaskDto extends createZodDto(taskSchema) {}
 class UpdateTaskDto extends createZodDto(updateTaskSchema) {}
 class orgIdQueryDto extends createZodDto(orgIdQuerySchema) {}
 
+@UseGuards(PermissionGuard)
 @ApiTags('tasks')
 @Controller('tasks')
 export class TasksController {
   constructor(private readonly service: TasksService) {}
 
   @Get()
-  @UseGuards(PermissionGuard)
   @RequirePermission('read:task:own,any')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get all tasks accessible to the user' })
@@ -71,7 +71,6 @@ export class TasksController {
    * @returns A promise resolving to the created task.
    */
   @Post()
-  @UseGuards(PermissionGuard)
   @RequirePermission('create:task:own,any')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new task' })
@@ -98,7 +97,6 @@ export class TasksController {
    * @returns A promise resolving to the updated task
    */
   @Put(':id')
-  @UseGuards(PermissionGuard)
   @RequirePermission('update:task:own,any')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update an existing task' })
@@ -124,7 +122,6 @@ export class TasksController {
    * @param taskId - The ID of the task to delete
    */
   @Delete(':id')
-  @UseGuards(PermissionGuard)
   @RequirePermission('delete:task:own,any')
   @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.NO_CONTENT)
