@@ -4,8 +4,8 @@ import { Store } from '@ngrx/store';
 import { API_BASE } from '../tokens';
 import { AuditLog, GetAuditLogsResponse } from '@task-management-system/data';
 import { firstValueFrom } from 'rxjs';
-import { selectSelectedOrgId } from '../../store';
 
+import { selectSelectedOrgId } from '../../store';
 
 interface LoadAuditLogsOptions {
   readonly orgId?: string | null;
@@ -18,58 +18,57 @@ const AUDIT_LOGS_DEFAULT_LIMIT = 50;
   providedIn: 'root',
 })
 export class AuditLogService {
-  private http = inject(HttpClient);
-  private store = inject(Store);
+  private readonly http = inject(HttpClient);
+  private readonly store = inject(Store);
   private readonly API_URL = inject(API_BASE);
-  public loading = signal<boolean>(false);
-  public error = signal<string | null>(null);
-  private selectedOrgId = this.store.selectSignal(selectSelectedOrgId);
+  private readonly selectedOrgId = this.store.selectSignal(selectSelectedOrgId);
 
+  readonly loading = signal(false);
+  readonly error = signal<string | null>(null);
   readonly logs = signal<AuditLog[]>([]);
-  readonly limit = signal<number>(AUDIT_LOGS_DEFAULT_LIMIT);
-  readonly offset = signal<number>(0);
-  readonly hasNext = signal<boolean>(false);
-  readonly hasPrevious = computed<boolean>(() => this.offset() > 0);
-  readonly pageIndex = computed<number>(() => {
-    const currentLimit = this.limit();
-    if (currentLimit === 0) {
-      return 0;
-    }
-    return Math.floor(this.offset() / currentLimit);
-  });
+  readonly total = signal(0);
+  readonly limit = signal(AUDIT_LOGS_DEFAULT_LIMIT);
+  readonly offset = signal(0);
+
+  readonly currentPage = computed(() =>
+    Math.floor(this.offset() / this.limit())
+  );
+  readonly totalPages = computed(
+    () => Math.ceil(this.total() / this.limit()) || 0
+  );
+  readonly hasNext = computed(
+    () => this.offset() + this.limit() < this.total()
+  );
+  readonly hasPrevious = computed(() => this.offset() > 0);
+
+  constructor() {
+    // Auto load when organization changes
+    effect(
+      () => {
+        const orgId = this.selectedOrgId();
+        this.resetPagination();
+        void this.load({ orgId, offset: 0 });
+      },
+      { allowSignalWrites: true }
+    );
+  }
 
   async load(options: LoadAuditLogsOptions = {}): Promise<void> {
-    this.loading.set(true);
-    this.error.set(null);
+    const params = this.buildRequestParams(options);
+
+    this.setLoadingState(true);
+
     try {
-      const resolvedOffset = options.offset ?? this.offset();
-      if (this.offset() !== resolvedOffset) {
-        this.offset.set(resolvedOffset);
-      }
-      const resolvedOrgId = options.orgId ?? this.selectedOrgId();
-      const currentLimit = this.limit();
-      this.hasNext.set(false);
-      console.log('Loading audit logs', {
-        orgId: resolvedOrgId,
-        offset: resolvedOffset,
-      });
-      let params = new HttpParams()
-        .set('limit', String(currentLimit))
-        .set('offset', String(resolvedOffset));
-      if (resolvedOrgId) {
-        params = params.set('orgId', resolvedOrgId);
-      }
-      const { logs, total } = await firstValueFrom(
+      const response = await firstValueFrom(
         this.http.get<GetAuditLogsResponse>(`${this.API_URL}/audit-logs`, {
           params,
         })
       );
-      this.logs.set(logs);
-      this.hasNext.set(logs.length === currentLimit);
-    } catch (e: any) {
-      this.error.set(e?.message ?? 'Failed to load audit logs');
+      this.updateState(response, options.offset ?? this.offset());
+    } catch (error) {
+      this.handleError(error);
     } finally {
-      this.loading.set(false);
+      this.setLoadingState(false);
     }
   }
 
@@ -89,15 +88,45 @@ export class AuditLogService {
     await this.load({ offset: previousOffset });
   }
 
-  constructor() {
-    effect(
-      () => {
-        const orgId = this.selectedOrgId();
-        this.offset.set(0);
-        void this.load({ orgId, offset: 0 });
-      },
-      { allowSignalWrites: true }
-    );
+  private buildRequestParams(options: LoadAuditLogsOptions): HttpParams {
+    const resolvedOffset = options.offset ?? this.offset();
+    const resolvedOrgId = options.orgId ?? this.selectedOrgId();
+
+    let params = new HttpParams()
+      .set('limit', this.limit().toString())
+      .set('offset', resolvedOffset.toString());
+
+    if (resolvedOrgId) {
+      params = params.set('orgId', resolvedOrgId);
+    }
+
+    return params;
+  }
+
+  private setLoadingState(loading: boolean): void {
+    this.loading.set(loading);
+    if (loading) {
+      this.error.set(null);
+    }
+  }
+
+  private handleError(error: any): void {
+    const message = error?.message ?? 'Failed to load audit logs';
+    this.error.set(message);
+    console.error('AuditLogService error:', error);
+  }
+
+  private updateState(response: GetAuditLogsResponse, newOffset: number): void {
+    this.logs.set(response.logs);
+    this.total.set(response.total);
+
+    if (this.offset() !== newOffset) {
+      this.offset.set(newOffset);
+    }
+  }
+
+  private resetPagination(): void {
+    this.offset.set(0);
+    this.total.set(0);
   }
 }
-

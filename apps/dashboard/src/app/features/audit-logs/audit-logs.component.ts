@@ -40,7 +40,9 @@ const stringifyMetadataValue = (metadataValue: unknown): string => {
   imports: [CommonModule, OrganizationSelector],
   template: `
     <section class="flex h-screen flex-col gap-6 p-6">
-      <header class="flex flex-wrap items-end justify-between gap-4 flex-shrink-0">
+      <header
+        class="flex flex-wrap items-end justify-between gap-4 flex-shrink-0"
+      >
         <div class="space-y-1">
           <h1 class="text-2xl font-semibold text-slate-900">Audit Logs</h1>
           <p class="text-sm text-slate-500">
@@ -50,11 +52,13 @@ const stringifyMetadataValue = (metadataValue: unknown): string => {
         <app-organization-selector></app-organization-selector>
 
         <span class="text-sm font-medium text-slate-500">
-          {{ entriesCount() }} entries
+          {{ entriesCount() }} of {{ totalRecords() }} entries
         </span>
       </header>
 
-      <div class="flex flex-col min-h-0 flex-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div
+        class="flex flex-col min-h-0 flex-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+      >
         <div class="flex-1 overflow-auto">
           <table [class]="TABLE_CLASSES.table">
             <thead class="bg-slate-50 sticky top-0 z-10">
@@ -63,7 +67,11 @@ const stringifyMetadataValue = (metadataValue: unknown): string => {
                 <th scope="col" [class]="TABLE_CLASSES.thBase">Actor</th>
                 <th scope="col" [class]="TABLE_CLASSES.thBase">Metadata</th>
                 <th scope="col" [class]="TABLE_CLASSES.thBase">Outcome</th>
-                <th scope="col" [class]="TABLE_CLASSES.thBase" class="text-right">
+                <th
+                  scope="col"
+                  [class]="TABLE_CLASSES.thBase"
+                  class="text-right"
+                >
                   Timestamp
                 </th>
               </tr>
@@ -151,7 +159,7 @@ const stringifyMetadataValue = (metadataValue: unknown): string => {
             ← Previous
           </button>
           <span class="text-sm font-medium text-slate-600">
-            Page {{ pageNumber() }}
+            Page {{ pageNumber() }} of {{ totalPages() }}
           </span>
           <button
             type="button"
@@ -194,9 +202,24 @@ export class AuditLogs {
     })
   );
 
-  protected readonly entriesCount = computed(() => this.displayLogs().length);
+  protected readonly entriesCount = computed(() => {
+    const currentPage = this.auditLogService.currentPage();
+    const limit = this.auditLogService.limit();
+    const currentPageEntries = this.displayLogs().length;
+
+    // Show cumulative entries viewed so far
+    return currentPage * limit + currentPageEntries;
+  });
   protected readonly isLoading = computed(() => this.auditLogService.loading());
-  protected readonly pageNumber = computed(() => this.auditLogService.pageIndex() + 1);
+  protected readonly pageNumber = computed(
+    () => this.auditLogService.currentPage() + 1
+  );
+  protected readonly totalPages = computed(() =>
+    this.auditLogService.totalPages()
+  );
+  protected readonly totalRecords = computed(() =>
+    this.auditLogService.total()
+  );
 
   protected goToNextPage(): void {
     void this.auditLogService.goToNextPage();
@@ -204,13 +227,5 @@ export class AuditLogs {
 
   protected goToPreviousPage(): void {
     void this.auditLogService.goToPreviousPage();
-  }
-
-  protected hasNext(): boolean {
-    return this.auditLogService.hasNext();
-  }
-
-  protected hasPrevious(): boolean {
-    return this.auditLogService.hasPrevious();
   }
 }
