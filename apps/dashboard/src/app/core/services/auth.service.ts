@@ -6,7 +6,10 @@ import { firstValueFrom } from 'rxjs';
 import { AuthBody, AuthResponse } from '@task-management-system/auth';
 import { User } from '@task-management-system/data';
 import { API_BASE } from '../tokens';
-import { createPersistedTokenSignal } from '../utils/auth.utils';
+import {
+  createPersistedTokenSignal,
+  REFRESH_TOKEN_KEY,
+} from '../utils/auth.utils';
 import { resetAppState } from '../../store';
 
 @Injectable({
@@ -20,6 +23,7 @@ export class AuthService {
   private readonly API_URL = inject(API_BASE);
 
   readonly token = createPersistedTokenSignal();
+  readonly refreshToken = createPersistedTokenSignal(REFRESH_TOKEN_KEY);
   readonly user = signal<User | null>(null);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
@@ -35,8 +39,7 @@ export class AuthService {
         const me = await this.fetchSelf();
         this.user.set(me);
       } catch {
-        this.user.set(null);
-        this.token.set(null);
+        this.resetState();
       } finally {
         this.loading.set(false);
       }
@@ -52,9 +55,11 @@ export class AuthService {
       );
       this.token.set(resp.access_token);
       this.user.set(resp.user);
+      this.refreshToken.set(resp.refresh_token);
       return resp;
     } catch (e: any) {
       this.error.set(e?.error?.message ?? 'Login failed');
+      this.resetState();
       throw e;
     } finally {
       this.loading.set(false);
@@ -70,5 +75,11 @@ export class AuthService {
 
   private async fetchSelf(): Promise<User> {
     return firstValueFrom(this.http.get<User>(`${this.API_URL}/auth/self`));
+  }
+
+  private resetState() {
+    this.token.set(null);
+    this.refreshToken.set(null);
+    this.user.set(null);
   }
 }
