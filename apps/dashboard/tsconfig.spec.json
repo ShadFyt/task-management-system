@@ -13,5 +13,6 @@
     "src/**/*.test.ts",
     "src/**/*.spec.ts",
     "src/**/*.d.ts"
+, "src/app/core/guards/mocks.ts"
   ]
 }
