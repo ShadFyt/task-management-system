@@ -2,7 +2,6 @@ import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuditLog } from './audit-logs.entity';
-import { Organization } from '../organizations/organizations.entity';
 import { CreateAuditLogData } from './audit-log.types';
 import { User } from '@task-management-system/data';
 import { checkOrganizationPermission } from '@task-management-system/auth';
@@ -13,9 +12,7 @@ export class AuditLogsService {
   private readonly logger = new Logger(AuditLogsService.name);
   constructor(
     @InjectRepository(AuditLog)
-    private readonly auditLogRepo: Repository<AuditLog>,
-    @InjectRepository(Organization)
-    private readonly orgRepo: Repository<Organization>
+    private readonly auditLogRepo: Repository<AuditLog>
   ) {}
 
   /**
