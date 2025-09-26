@@ -46,7 +46,6 @@
     "zone.js": "~0.15.0"
   },
   "devDependencies": {
-    "@anatine/zod-mock": "^3.14.0",
     "@angular-devkit/core": "~20.2.0",
     "@angular-devkit/schematics": "~20.2.0",
     "@angular/build": "~20.2.0",
@@ -83,6 +82,7 @@
     "@types/node": "20.19.9",
     "@types/passport-jwt": "^4.0.1",
     "@types/passport-local": "^1.0.38",
+    "@types/supertest": "^6.0.3",
     "@typescript-eslint/utils": "^8.40.0",
     "angular-eslint": "^20.2.0",
     "autoprefixer": "^10.4.21",
@@ -98,6 +98,7 @@
     "nx": "21.5.2",
     "postcss": "^8.5.6",
     "prettier": "^2.6.2",
+    "supertest": "^7.1.4",
     "tailwindcss": "^3.4.17",
     "ts-jest": "^29.4.0",
     "ts-node": "10.9.1",
