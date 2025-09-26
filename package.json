@@ -8,7 +8,8 @@
     "build:api": "npx nx build api",
     "build:dashboard": "npx nx build dashboard",
     "setup": "npm install && npm run build:api",
-    "test:api": "npx nx test api"
+    "test:api": "npx nx test api",
+    "test:dashboard": "npx nx test dashboard"
   },
   "private": true,
   "dependencies": {
