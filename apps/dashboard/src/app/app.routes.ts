@@ -1,9 +1,5 @@
 import { Data, Route } from '@angular/router';
-import {
-  authGuard,
-  guestGuard,
-  permissionGuard,
-} from './core/guards/auth.guard';
+import { authGuard, guestGuard, permissionGuard } from './core/guards';
 import { PermissionString } from '@task-management-system/auth';
 
 interface AppRouteData extends Data {
