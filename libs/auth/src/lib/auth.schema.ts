@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { userSchema } from '@task-management-system/data';
 
 export const authResponseSchema = z.object({
-  access_token: z.string(),
-  refresh_token: z.string(),
+  accessToken: z.string(),
+  refreshToken: z.string(),
   user: userSchema,
 });
 
