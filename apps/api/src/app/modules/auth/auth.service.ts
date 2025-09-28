@@ -3,6 +3,7 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { UserService } from '../users/user.service';
 import * as bcrypt from 'bcrypt';
@@ -14,6 +15,7 @@ import { UserDto } from '../users/users.dto';
 import { User, userSchema } from '@task-management-system/data';
 import { AuthBody, AuthResponse } from '@task-management-system/auth';
 import { User as UserEntity } from '../users/users.entity';
+import { randomUUID } from 'node:crypto';
 
 @Injectable()
 export class AuthService {
@@ -44,9 +46,10 @@ export class AuthService {
       accessToken,
       refreshToken,
       user: userData,
+      jti,
     } = await this.signTokens(foundUser);
 
-    await this.saveRefreshToken(refreshToken, user.id);
+    await this.saveRefreshToken(refreshToken, user.id, jti);
 
     this.logger.log(`Generated tokens for user: ${user.email}`);
 
@@ -82,6 +85,8 @@ export class AuthService {
    * @returns An object containing the signed access token, refresh token, and sanitized user data.
    */
   async signTokens(user: UserEntity) {
+    const jti = randomUUID();
+
     const { organization, ...rest } = user;
 
     const subOrganizations = organization.children.map((org) => ({
@@ -106,29 +111,52 @@ export class AuthService {
       this.jwtService.signAsync(jwtPayload, {
         expiresIn: '1h',
       }),
-      this.jwtService.signAsync(jwtPayload, {
-        expiresIn: '7d',
-      }),
+      this.jwtService.signAsync(
+        { sub: user.id, email: user.email, jti },
+        {
+          expiresIn: '7d',
+        }
+      ),
     ]);
 
     return {
       accessToken,
       refreshToken,
       user: { ...rest, organization: mappedOrganization, subOrganizations },
+      jti,
     };
+  }
+
+  async validateRefreshToken(jti: string) {
+    const foundToken = await this.tokenRepository.findOneBy({
+      id: jti,
+    });
+    if (!foundToken) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+    if (foundToken.isUsed) {
+      await this.tokenRepository.delete(foundToken.id);
+      throw new UnauthorizedException('Refresh token already used');
+    }
+    foundToken.isUsed = true;
+    await this.tokenRepository.save(foundToken);
+    return foundToken;
   }
 
   /**
    * Save a refresh token for a user
    * @param refreshToken - The refresh token to save
    * @param userId - The ID of the user
+   * @param jti - The JTI of the refresh token
    */
   private async saveRefreshToken(
     refreshToken: string,
-    userId: string
+    userId: string,
+    jti: string
   ): Promise<void> {
     const hashedRefreshToken = await this.hashPassword(refreshToken);
     const refreshTokenEntity = this.tokenRepository.create({
+      id: jti,
       type: 'refresh',
       jwtToken: hashedRefreshToken,
       userId,

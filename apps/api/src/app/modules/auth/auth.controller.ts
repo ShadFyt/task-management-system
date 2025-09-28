@@ -48,8 +48,15 @@ export class AuthController {
     type: AuthResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async login(@Request() req: AuthenticatedRequest): Promise<AuthResponse> {
-    return this.authService.login(req.user);
+  async login(@Request() req: AuthenticatedRequest, @Response() res: response) {
+    const authResponse = await this.authService.login(req.user);
+    res.cookie('refresh_token', authResponse.refreshToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    });
+    return res.json(authResponse);
   }
 
   @HttpCode(HttpStatus.NO_CONTENT)
