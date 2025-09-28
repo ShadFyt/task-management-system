@@ -7,7 +7,10 @@ import {
   Request,
   UseGuards,
   InternalServerErrorException,
+  Req,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBearerAuth,
@@ -20,13 +23,17 @@ import { Public } from '../../core/public.decorator';
 import { userSchema, User } from '@task-management-system/data';
 import {
   authBodySchema,
-  AuthResponse,
   authResponseSchema,
 } from '@task-management-system/auth';
 import { createZodDto } from 'nestjs-zod';
+import { RefreshAuthGuard } from './jwt-auth.guard';
 
 interface AuthenticatedRequest extends Request {
   user: User;
+}
+
+interface AuthenticatedRefreshRequest extends Request {
+  user: { sub: string; email: string };
 }
 
 class UserDto extends createZodDto(userSchema) {}
@@ -48,15 +55,21 @@ export class AuthController {
     type: AuthResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async login(@Request() req: AuthenticatedRequest, @Response() res: response) {
-    const authResponse = await this.authService.login(req.user);
+  async login(
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response
+  ) {
+    const authResponse = await this.authService.generateAuthResponse(
+      req.user.id
+    );
     res.cookie('refresh_token', authResponse.refreshToken, {
       httpOnly: true,
       secure: false,
       sameSite: 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 7,
+      // domain: '127.0.0.1',
     });
-    return res.json(authResponse);
+    return authResponse;
   }
 
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -84,5 +97,25 @@ export class AuthController {
     if (!success)
       throw new InternalServerErrorException('Failed to parse user data');
     return data;
+  }
+
+  @Public()
+  @UseGuards(RefreshAuthGuard)
+  @Get('refresh')
+  async refreshTokens(
+    @Req() req: AuthenticatedRefreshRequest,
+    @Res({ passthrough: true }) res: Response
+  ) {
+    const authResponse = await this.authService.generateAuthResponse(
+      req.user.sub
+    );
+    res.cookie('refresh_token', authResponse.refreshToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+      domain: '127.0.0.1',
+    });
+    return authResponse;
   }
 }

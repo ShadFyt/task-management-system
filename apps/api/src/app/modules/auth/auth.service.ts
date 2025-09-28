@@ -12,7 +12,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Token } from './token.entity';
 import { UserDto } from '../users/users.dto';
-import { User, userSchema } from '@task-management-system/data';
+import { userSchema } from '@task-management-system/data';
 import { AuthBody, AuthResponse } from '@task-management-system/auth';
 import { User as UserEntity } from '../users/users.entity';
 import { randomUUID } from 'node:crypto';
@@ -39,8 +39,8 @@ export class AuthService {
     return null;
   }
 
-  async login(user: User): Promise<AuthResponse> {
-    const foundUser = await this.userService.findOneByIdOrThrow(user.id);
+  async generateAuthResponse(userId: string): Promise<AuthResponse> {
+    const foundUser = await this.userService.findOneByIdOrThrow(userId);
 
     const {
       accessToken,
@@ -49,9 +49,7 @@ export class AuthService {
       jti,
     } = await this.signTokens(foundUser);
 
-    await this.saveRefreshToken(refreshToken, user.id, jti);
-
-    this.logger.log(`Generated tokens for user: ${user.email}`);
+    await this.saveRefreshToken(refreshToken, foundUser.id, jti);
 
     const { success, data } = userSchema.safeParse(userData);
     if (!success) {
@@ -109,7 +107,7 @@ export class AuthService {
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(jwtPayload, {
-        expiresIn: '1h',
+        expiresIn: '15m',
       }),
       this.jwtService.signAsync(
         { sub: user.id, email: user.email, jti },
@@ -127,6 +125,12 @@ export class AuthService {
     };
   }
 
+  /**
+   * Validates a refresh token and ensures it has not been used before.
+   * Throws an UnauthorizedException if the token is invalid or has been used.
+   * @param jti - The JWT ID of the refresh token to validate.
+   * @returns The validated token.
+   */
   async validateRefreshToken(jti: string) {
     const foundToken = await this.tokenRepository.findOneBy({
       id: jti,

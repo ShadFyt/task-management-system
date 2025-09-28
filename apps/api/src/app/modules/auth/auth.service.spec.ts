@@ -15,6 +15,11 @@ jest.mock('bcrypt', () => ({
   hash: jest.fn(),
   compare: jest.fn(),
 }));
+const JWT_ID = 'mock-jti-123-456-789';
+
+jest.mock('node:crypto', () => ({
+  randomUUID: jest.fn(() => JWT_ID),
+}));
 
 const expectedJwtPayload = {
   id: mockUser.id,
@@ -127,7 +132,7 @@ describe('AuthService', () => {
     });
   });
 
-  describe('login', () => {
+  describe('generateAuthResponse', () => {
     const mockAccessToken = 'mock.access.token';
     const mockRefreshToken = 'mock.refresh.token';
     const mockHashedRefreshToken = 'hashedRefreshToken';
@@ -146,6 +151,7 @@ describe('AuthService', () => {
         .spyOn(service, 'hashPassword')
         .mockResolvedValue(mockHashedRefreshToken);
       jest.spyOn(service, 'signTokens').mockResolvedValue({
+        jti: JWT_ID,
         accessToken: mockAccessToken,
         refreshToken: mockRefreshToken,
         user: {
@@ -158,7 +164,7 @@ describe('AuthService', () => {
         },
       });
 
-      const result = await service.login(mockUser as User);
+      const result = await service.generateAuthResponse(mockUser.id);
 
       expect(result).toEqual({
         accessToken: mockAccessToken,
@@ -178,6 +184,7 @@ describe('AuthService', () => {
 
       // Verify refresh token was stored
       expect(tokenRepository.create).toHaveBeenCalledWith({
+        id: JWT_ID,
         type: 'refresh',
         jwtToken: expect.any(String),
         userId: mockUser.id,
@@ -191,7 +198,7 @@ describe('AuthService', () => {
         new Error('User not found')
       );
 
-      await expect(service.login(mockUser as User)).rejects.toThrow(
+      await expect(service.generateAuthResponse(mockUser.id)).rejects.toThrow(
         'User not found'
       );
     });
@@ -295,6 +302,7 @@ describe('AuthService', () => {
       const result = await service.signTokens(mockUser);
 
       expect(result).toEqual({
+        jti: JWT_ID,
         accessToken: mockAccessToken,
         refreshToken: mockRefreshToken,
         user: {
@@ -319,7 +327,7 @@ describe('AuthService', () => {
         1,
         expectedJwtPayload,
         {
-          expiresIn: '1h',
+          expiresIn: '15m',
         }
       );
     });
