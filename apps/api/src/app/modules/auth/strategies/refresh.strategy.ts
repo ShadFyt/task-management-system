@@ -6,7 +6,10 @@ import { ConfigService } from '@nestjs/config';
 import { AuthService } from '../auth.service';
 
 const cookieExtractor = (req: Request): string | null => {
-  console.log('req.cookies', req.cookies);
+  console.log('Full request headers:', req.headers);
+  console.log('Cookie header:', req.headers.cookie);
+  console.log('req.cookies:', req.cookies);
+  console.log('req.cookies type:', typeof req.cookies);
   return req.cookies?.refresh_token || null;
 };
 

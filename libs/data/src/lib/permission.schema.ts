@@ -5,8 +5,6 @@ export const EntityEnum = z.enum(['task', 'user', 'audit-log']);
 export const AccessEnum = z.enum(['own', 'any', 'own,any', 'any,own']);
 
 export const permissionSchema = z.object({
-  id: z.string().min(1),
-  description: z.string(),
   action: ActionEnum,
   entity: EntityEnum,
   access: AccessEnum,
