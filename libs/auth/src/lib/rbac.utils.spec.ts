@@ -15,32 +15,24 @@ describe('RBAC Utils', () => {
   // Test fixtures
   const mockPermissions: Permission[] = [
     {
-      id: 'perm-1',
       action: 'create',
       entity: 'task',
       access: 'own',
-      description: 'Create own tasks',
     },
     {
-      id: 'perm-2',
       action: 'read',
       entity: 'task',
       access: 'own,any',
-      description: 'Read tasks',
     },
     {
-      id: 'perm-3',
       action: 'update',
       entity: 'user',
       access: 'any',
-      description: 'Update any user',
     },
     {
-      id: 'perm-4',
       action: 'delete',
       entity: 'audit-log',
       access: 'any',
-      description: 'Delete audit logs',
     },
   ];
 
@@ -389,18 +381,14 @@ describe('RBAC Utils', () => {
         description: 'Complex role with mixed permissions',
         permissions: [
           {
-            id: 'perm-complex-1',
             action: 'read',
             entity: 'task',
             access: 'own',
-            description: 'Read own tasks',
           },
           {
-            id: 'perm-complex-2',
             action: 'create',
             entity: 'task',
             access: 'any',
-            description: 'Create any tasks',
           },
         ],
       };

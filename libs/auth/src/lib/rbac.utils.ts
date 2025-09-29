@@ -90,15 +90,15 @@ export const checkPermissionByString = (
       if (!access || access.length === 0) return true;
 
       // Normalize role’s granted access
-      const granted = Array.isArray((permission as any).access)
-        ? ((permission as any).access as PermissionAccess[])
-        : (String(permission.access)
-            .split(',')
-            .map((a) => a.trim())
-            .filter(Boolean) as PermissionAccess[]);
+      const granted = new Set(
+        String(permission.access)
+          .split(',')
+          .map((a) => a.trim().toLowerCase())
+          .filter(Boolean)
+      );
 
       // Pass if any requested access is included in the granted set
-      return access.some((a) => granted.includes(a));
+      return access.some((a) => granted.has(a));
     }) ?? false
   );
 };
