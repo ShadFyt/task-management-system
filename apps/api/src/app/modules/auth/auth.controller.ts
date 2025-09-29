@@ -62,13 +62,7 @@ export class AuthController {
     const authResponse = await this.authService.generateAuthResponse(
       req.user.id
     );
-    res.cookie('refresh_token', authResponse.refreshToken, {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
-      maxAge: 1000 * 60 * 60 * 24 * 7,
-      // domain: '127.0.0.1',
-    });
+    this.setRefreshTokenCookie(res, authResponse.refreshToken);
     return authResponse;
   }
 
@@ -109,13 +103,17 @@ export class AuthController {
     const authResponse = await this.authService.generateAuthResponse(
       req.user.sub
     );
-    res.cookie('refresh_token', authResponse.refreshToken, {
+    this.setRefreshTokenCookie(res, authResponse.refreshToken);
+    return authResponse;
+  }
+
+  private setRefreshTokenCookie(res: Response, refreshToken: string) {
+    res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: false,
       sameSite: 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 7,
       domain: '127.0.0.1',
     });
-    return authResponse;
   }
 }
