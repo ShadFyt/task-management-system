@@ -3,7 +3,7 @@ import {
   PermissionAccess,
   PermissionAction,
   PermissionEntity,
-  Role,
+  RoleDto,
   User as AuthUser,
 } from '@task-management-system/data';
 
@@ -46,7 +46,7 @@ export const parsePermissionString = (p: PermissionString) => {
  * @returns Returns true if the role has the required permission; otherwise, returns false.
  */
 export const checkPermission = (
-  role: Role,
+  role: RoleDto,
   entity: PermissionEntity,
   action: PermissionAction,
   access: PermissionAccess
@@ -76,7 +76,7 @@ export const checkPermission = (
  * @returns Returns `true` if the role has the required permission, otherwise `false`.
  */
 export const checkPermissionByString = (
-  role: Role,
+  role: RoleDto,
   permissionString: PermissionString
 ) => {
   const { action, entity, access } = parsePermissionString(permissionString);

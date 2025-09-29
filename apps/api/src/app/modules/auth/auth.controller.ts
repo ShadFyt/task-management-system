@@ -7,7 +7,10 @@ import {
   Request,
   UseGuards,
   InternalServerErrorException,
+  Req,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBearerAuth,
@@ -20,13 +23,17 @@ import { Public } from '../../core/public.decorator';
 import { userSchema, User } from '@task-management-system/data';
 import {
   authBodySchema,
-  AuthResponse,
   authResponseSchema,
 } from '@task-management-system/auth';
 import { createZodDto } from 'nestjs-zod';
+import { RefreshAuthGuard } from './jwt-auth.guard';
 
 interface AuthenticatedRequest extends Request {
   user: User;
+}
+
+interface AuthenticatedRefreshRequest extends Request {
+  user: { sub: string; email: string };
 }
 
 class UserDto extends createZodDto(userSchema) {}
@@ -48,8 +55,15 @@ export class AuthController {
     type: AuthResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async login(@Request() req: AuthenticatedRequest): Promise<AuthResponse> {
-    return this.authService.login(req.user);
+  async login(
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response
+  ) {
+    const authResponse = await this.authService.generateAuthResponse(
+      req.user.id
+    );
+    this.setRefreshTokenCookie(res, authResponse.refreshToken);
+    return authResponse;
   }
 
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -77,5 +91,29 @@ export class AuthController {
     if (!success)
       throw new InternalServerErrorException('Failed to parse user data');
     return data;
+  }
+
+  @Public()
+  @UseGuards(RefreshAuthGuard)
+  @Get('refresh')
+  async refreshTokens(
+    @Req() req: AuthenticatedRefreshRequest,
+    @Res({ passthrough: true }) res: Response
+  ) {
+    const authResponse = await this.authService.generateAuthResponse(
+      req.user.sub
+    );
+    this.setRefreshTokenCookie(res, authResponse.refreshToken);
+    return authResponse;
+  }
+
+  private setRefreshTokenCookie(res: Response, refreshToken: string) {
+    res.cookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+      domain: '127.0.0.1',
+    });
   }
 }

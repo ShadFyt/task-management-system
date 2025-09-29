@@ -1,9 +1,8 @@
-import { HttpContextToken, HttpInterceptorFn } from '@angular/common/http';
+import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { AuthService } from '../services/auth.service';
 import { catchError, throwError } from 'rxjs';
-
-export const SKIP_AUTH = new HttpContextToken<boolean>(() => false);
+import { RETRIED, SKIP_AUTH } from '../tokens';
 
 /**
  * HTTP Interceptor that adds JWT token to all API requests
@@ -20,7 +19,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   return next(cloned).pipe(
     catchError((err) => {
       if (err.status === 401) {
-        auth.logout(); // TODO: Add refresh token logic
+        if (req.context.get(RETRIED)) {
+          auth.resetState();
+          return throwError(() => err);
+        }
+        return auth.refreshAndRetry(req, next);
       }
       return throwError(() => err);
     })

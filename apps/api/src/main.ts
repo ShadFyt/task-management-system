@@ -5,6 +5,8 @@
 
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
+
 import { AppModule } from './app/app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { DatabaseSeederService } from './app/core/database-seeder.service';
@@ -27,6 +29,8 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     credentials: true,
   });
+
+  app.use(cookieParser());
   if (process.env.NODE_ENV === 'development') {
     const seeder = app.get(DatabaseSeederService);
     await seeder.seedAll();

@@ -15,6 +15,24 @@ jest.mock('bcrypt', () => ({
   hash: jest.fn(),
   compare: jest.fn(),
 }));
+const JWT_ID = 'mock-jti-123-456-789';
+
+jest.mock('node:crypto', () => ({
+  randomUUID: jest.fn(() => JWT_ID),
+}));
+
+const expectedJwtPayload = {
+  id: mockUser.id,
+  sub: mockUser.id,
+  email: mockUser.email,
+  name: mockUser.name,
+  organization: {
+    id: mockUser.organizationId,
+    name: mockUser.organization.name,
+  },
+  role: mockUser.role,
+  subOrganizations: [],
+};
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -45,9 +63,9 @@ describe('AuthService', () => {
     service = unit;
     userService = unitRef.get<UserService>(UserService);
     jwtService = unitRef.get<JwtService>(JwtService);
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-expect-error
-    tokenRepository = unitRef.get<Repository<Token>>(getRepositoryToken(Token));
+    tokenRepository = unitRef.get<Repository<Token>>(
+      `${getRepositoryToken(Token)}`
+    );
     bcryptHashMock = bcrypt.hash as jest.MockedFunction<typeof bcrypt.hash>;
     bcryptCompareMock = bcrypt.compare as jest.MockedFunction<
       typeof bcrypt.compare
@@ -114,7 +132,7 @@ describe('AuthService', () => {
     });
   });
 
-  describe('login', () => {
+  describe('generateAuthResponse', () => {
     const mockAccessToken = 'mock.access.token';
     const mockRefreshToken = 'mock.refresh.token';
     const mockHashedRefreshToken = 'hashedRefreshToken';
@@ -132,12 +150,25 @@ describe('AuthService', () => {
       jest
         .spyOn(service, 'hashPassword')
         .mockResolvedValue(mockHashedRefreshToken);
+      jest.spyOn(service, 'signTokens').mockResolvedValue({
+        jti: JWT_ID,
+        accessToken: mockAccessToken,
+        refreshToken: mockRefreshToken,
+        user: {
+          ...mockUser,
+          organization: {
+            id: mockUser.organizationId,
+            name: mockUser.organization.name,
+          },
+          subOrganizations: [],
+        },
+      });
 
-      const result = await service.login(mockUser as User);
+      const result = await service.generateAuthResponse(mockUser.id);
 
       expect(result).toEqual({
-        access_token: mockAccessToken,
-        refresh_token: mockRefreshToken,
+        accessToken: mockAccessToken,
+        refreshToken: mockRefreshToken,
         user: expect.objectContaining({
           id: mockUser.id,
           email: mockUser.email,
@@ -151,34 +182,9 @@ describe('AuthService', () => {
         }),
       });
 
-      expect(jwtService.sign).toHaveBeenCalledTimes(2);
-
-      expect(jwtService.sign).toHaveBeenNthCalledWith(
-        1,
-        expect.objectContaining({
-          sub: mockUser.id,
-          id: mockUser.id,
-          email: mockUser.email,
-          role: mockUser.role,
-          name: mockUser.name,
-          organization: {
-            id: mockUser.organizationId,
-            name: mockUser.organization.name,
-          },
-          subOrganizations: [],
-        }),
-        { expiresIn: '1h' }
-      );
-
-      // Refresh token call
-      expect(jwtService.sign).toHaveBeenNthCalledWith(
-        2,
-        { sub: mockUser.id, email: mockUser.email },
-        { expiresIn: '7d' }
-      );
-
       // Verify refresh token was stored
       expect(tokenRepository.create).toHaveBeenCalledWith({
+        id: JWT_ID,
         type: 'refresh',
         jwtToken: expect.any(String),
         userId: mockUser.id,
@@ -192,7 +198,7 @@ describe('AuthService', () => {
         new Error('User not found')
       );
 
-      await expect(service.login(mockUser as User)).rejects.toThrow(
+      await expect(service.generateAuthResponse(mockUser.id)).rejects.toThrow(
         'User not found'
       );
     });
@@ -276,6 +282,53 @@ describe('AuthService', () => {
       expect(bcryptCompareMock).toHaveBeenCalledWith(
         plainPassword,
         hashedPassword
+      );
+    });
+  });
+
+  describe('signTokens', () => {
+    it('should be defined', () => {
+      expect(service.signTokens).toBeDefined();
+    });
+
+    it('should sign tokens and return access token, refresh token, and user data', async () => {
+      const mockAccessToken = 'mock-access-token';
+      const mockRefreshToken = 'mock-refresh-token';
+
+      jwtService.signAsync
+        .mockResolvedValueOnce(mockAccessToken)
+        .mockResolvedValueOnce(mockRefreshToken);
+
+      const result = await service.signTokens(mockUser);
+
+      expect(result).toEqual({
+        jti: JWT_ID,
+        accessToken: mockAccessToken,
+        refreshToken: mockRefreshToken,
+        user: {
+          ...mockUser,
+          organization: {
+            id: mockUser.organizationId,
+            name: mockUser.organization.name,
+          },
+          subOrganizations: [],
+        },
+      });
+    });
+
+    it('should call jwtService.signAsync with correct parameters for access token', async () => {
+      jwtService.signAsync
+        .mockResolvedValueOnce('access-token')
+        .mockResolvedValueOnce('refresh-token');
+
+      await service.signTokens(mockUser);
+
+      expect(jwtService.signAsync).toHaveBeenNthCalledWith(
+        1,
+        expectedJwtPayload,
+        {
+          expiresIn: '15m',
+        }
       );
     });
   });

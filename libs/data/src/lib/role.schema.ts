@@ -8,4 +8,8 @@ export const roleSchema = z.object({
   permissions: permissionSchema.array(),
 });
 
+export const roleBareSchema = roleSchema.omit({ id: true, description: true });
+
 export type Role = z.infer<typeof roleSchema>;
+
+export type RoleDto = z.infer<typeof roleBareSchema>;
