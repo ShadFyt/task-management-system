@@ -1,15 +1,26 @@
 import { Injectable, inject, signal, effect, computed } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpContext,
+  HttpHandlerFn,
+  HttpRequest,
+} from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { firstValueFrom } from 'rxjs';
+import {
+  BehaviorSubject,
+  catchError,
+  filter,
+  finalize,
+  firstValueFrom,
+  switchMap,
+  take,
+  throwError,
+} from 'rxjs';
 import { AuthBody, AuthResponse } from '@task-management-system/auth';
 import { User } from '@task-management-system/data';
-import { API_BASE } from '../tokens';
-import {
-  createPersistedTokenSignal,
-  REFRESH_TOKEN_KEY,
-} from '../utils/auth.utils';
+import { API_BASE, RETRIED, SKIP_AUTH } from '../tokens';
+import { createPersistedTokenSignal } from '../utils/auth.utils';
 import { resetAppState } from '../../store';
 
 @Injectable({
@@ -23,7 +34,9 @@ export class AuthService {
   private readonly API_URL = inject(API_BASE);
 
   readonly token = createPersistedTokenSignal();
-  readonly refreshToken = createPersistedTokenSignal(REFRESH_TOKEN_KEY);
+  readonly isRefreshing = signal(false);
+  refreshSubject = new BehaviorSubject<string | null>(null);
+
   readonly user = signal<User | null>(null);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
@@ -51,11 +64,13 @@ export class AuthService {
     this.error.set(null);
     try {
       const resp = await firstValueFrom(
-        this.http.post<AuthResponse>(`${this.API_URL}/auth/login`, credentials)
+        this.http.post<AuthResponse>(
+          `${this.API_URL}/auth/login`,
+          credentials,
+          { withCredentials: true }
+        )
       );
-      this.token.set(resp.access_token);
-      this.user.set(resp.user);
-      this.refreshToken.set(resp.refresh_token);
+      this.setTokens(resp);
       return resp;
     } catch (e: any) {
       this.error.set(e?.error?.message ?? 'Login failed');
@@ -73,13 +88,58 @@ export class AuthService {
     this.router.navigate(['/login']);
   }
 
+  refreshAndRetry(req: HttpRequest<any>, next: HttpHandlerFn) {
+    if (this.isRefreshing()) {
+      return this.refreshSubject.pipe(
+        filter((t): t is string => t !== null), // allow only real tokens to pass through the queue
+        take(1), // retry just once with the first refreshed token
+        switchMap((newToken) => {
+          const retried = req.clone({
+            setHeaders: { Authorization: `Bearer ${newToken}` },
+            context: req.context.set(RETRIED, true),
+          });
+          return next(retried);
+        })
+      );
+    }
+    this.isRefreshing.set(true);
+    this.refreshSubject.next(null);
+
+    return this.http
+      .get<AuthResponse>(`${this.API_URL}/auth/refresh`, {
+        context: new HttpContext().set(SKIP_AUTH, true),
+        withCredentials: true,
+      })
+      .pipe(
+        switchMap((resp) => {
+          this.setTokens(resp);
+          this.refreshSubject.next(resp.accessToken); // wake queued requests with the fresh token
+          const retried = req.clone({
+            setHeaders: { Authorization: `Bearer ${resp.accessToken}` },
+            context: req.context.set(RETRIED, true),
+          });
+          return next(retried);
+        }),
+        catchError((e) => {
+          // bubble the original error to let caller handle logout or other flows
+          this.resetState();
+          this.logout();
+          return throwError(() => e);
+        }),
+        finalize(() => this.isRefreshing.set(false)) // ensure the refresh flag resets even when errors occur
+      );
+  }
+
   private async fetchSelf(): Promise<User> {
     return firstValueFrom(this.http.get<User>(`${this.API_URL}/auth/self`));
   }
+  private setTokens(resp: AuthResponse) {
+    this.token.set(resp.accessToken);
+    this.user.set(resp.user);
+  }
 
-  private resetState() {
+  public resetState() {
     this.token.set(null);
-    this.refreshToken.set(null);
     this.user.set(null);
   }
 }
