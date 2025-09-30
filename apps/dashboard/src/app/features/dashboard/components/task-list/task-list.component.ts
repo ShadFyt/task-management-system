@@ -125,19 +125,16 @@ export class TaskList {
   private authService = inject(AuthService);
 
   status = input<'todo' | 'in-progress' | 'done'>('todo');
+  tasks = input.required<Task[]>();
   currentFilter = this.store.selectSignal(selectCurrentFilter);
 
   filteredTasks = computed(() => {
-    let tasks = this.taskService
-      .tasks()
-      .filter((task) => task.status === this.status());
-
     const filter = this.currentFilter();
     if (filter !== 'all') {
-      tasks = tasks.filter((task) => task.type === filter);
+      return this.tasks().filter((task) => task.type === filter);
     }
 
-    return tasks;
+    return this.tasks();
   });
 
   canDeleteTask = (task: Task): boolean => {

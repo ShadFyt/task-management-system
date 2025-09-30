@@ -152,7 +152,7 @@ import { ThemeToggle } from './components/theme-toggle.component';
               {{ column.title }} ({{ column.tasks().length }})
             </h3>
           </div>
-          <app-task-list [status]="column.status" />
+          <app-task-list [tasks]="column.tasks()" [status]="column.status" />
         </div>
         }
       </div>
