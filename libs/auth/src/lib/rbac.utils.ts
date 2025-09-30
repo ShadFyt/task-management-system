@@ -25,11 +25,13 @@ import {
  *          - `access` (PermissionAccess[]): (Optional) An array of access levels parsed from the string.
  */
 export const parsePermissionString = (p: PermissionString) => {
+  // Split input string by ':' into up to 3 parts: action, entity, and access list
   const [action, entity, accessPart] = p.split(':') as [
     PermissionAction,
     PermissionEntity,
     PermissionAccess?
   ];
+  // If access part exists, split by ',' and filter out empty entries
   const access = accessPart
     ? (accessPart.split(',').filter(Boolean) as PermissionAccess[])
     : undefined;
@@ -55,15 +57,18 @@ export const checkPermission = (
     console.error('No permissions found for role:', role);
     return false;
   }
+  const normalizedAccess = access.trim().toLowerCase() as PermissionAccess;
+
   return role.permissions.some((permission) => {
     const userAccess = permission.access
       .split(',')
+      .map((a) => a.trim().toLowerCase())
       .filter(Boolean) as PermissionAccess[];
 
     return (
       permission.entity === entity &&
       permission.action === action &&
-      userAccess.includes(access)
+      userAccess.includes(normalizedAccess)
     );
   });
 };

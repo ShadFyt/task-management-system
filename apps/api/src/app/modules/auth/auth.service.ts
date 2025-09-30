@@ -95,6 +95,8 @@ export class AuthService {
       id: organization.id,
       name: organization.name,
     };
+
+    // TODO: implement cache-based permissions instead of including them in the JWT payload
     const jwtPayload = {
       sub: user.id,
       id: user.id,
