@@ -143,38 +143,18 @@ import { ThemeToggle } from './components/theme-toggle.component';
       </div>
 
       <div class="space-y-6 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-6">
+        @for (column of taskColumns; track column.status) {
         <div class="task-column">
           <div
             class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700"
           >
             <h3 class="text-header text-sm sm:text-base">
-              To Do ({{ todoTasks().length }})
+              {{ column.title }} ({{ column.tasks().length }})
             </h3>
           </div>
-          <app-task-list status="todo" />
+          <app-task-list [status]="column.status" />
         </div>
-
-        <div class="task-column">
-          <div
-            class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700"
-          >
-            <h3 class="text-header text-sm sm:text-base">
-              In Progress ({{ inProgressTasks().length }})
-            </h3>
-          </div>
-          <app-task-list status="in-progress" />
-        </div>
-
-        <div class="task-column">
-          <div
-            class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700"
-          >
-            <h3 class="text-header text-sm sm:text-base">
-              Done ({{ doneTasks().length }})
-            </h3>
-          </div>
-          <app-task-list status="done" />
-        </div>
+        }
       </div>
       }
     </main>
@@ -223,6 +203,16 @@ export class Dashboard {
     { key: 'all' as const, label: 'All' },
     { key: 'personal' as const, label: 'Personal' },
     { key: 'work' as const, label: 'Work' },
+  ];
+
+  readonly taskColumns = [
+    { status: 'todo' as const, title: 'To Do', tasks: this.todoTasks },
+    {
+      status: 'in-progress' as const,
+      title: 'In Progress',
+      tasks: this.inProgressTasks,
+    },
+    { status: 'done' as const, title: 'Done', tasks: this.doneTasks },
   ];
 
   getFilterCount(filter: FilterType): number {

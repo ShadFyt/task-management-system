@@ -3,10 +3,7 @@ import { inject } from '@angular/core';
 import { AuthService } from '../services/auth.service';
 import { filter, firstValueFrom, map } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
-import {
-  checkPermissionByString,
-  PermissionString,
-} from '@task-management-system/auth';
+import { checkPermissionByString } from '@task-management-system/auth';
 
 /**
  * Route guard that checks if the current user has the required permission to access a route.
@@ -46,7 +43,7 @@ export const permissionGuard: CanActivateFn = async (route, state) => {
       return false;
     }
 
-    const requiredPermission = route.data?.['permission'] as PermissionString;
+    const requiredPermission = route.data?.['permission'];
     if (!requiredPermission) {
       console.warn('No permission specified for route:', state.url);
       return true; // Allow if no permission specified
