@@ -1,9 +1,9 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import { AuditLogsService } from '../modules/audit-logs/audit-logs.service';
+import { AuditLogsService } from '../../modules/audit-logs/audit-logs.service';
 import { checkOrganizationPermission } from '@task-management-system/auth';
 import { PermissionAction } from '@task-management-system/data';
 import { User as AuthUser } from '@task-management-system/data';
-import { CreateAuditLogData } from '../modules/audit-logs/audit-log.types';
+import { CreateAuditLogData } from '../../modules/audit-logs/audit-log.types';
 
 @Injectable()
 export class OrganizationAccessService {
@@ -15,7 +15,6 @@ export class OrganizationAccessService {
   validateAccess(
     authUser: AuthUser,
     orgId: string | undefined,
-    resourceType: string,
     action: PermissionAction
   ): string {
     const targetOrgId = orgId ?? authUser.organization.id;

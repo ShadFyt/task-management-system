@@ -1,7 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../modules/auth/auth.module';
-import { OrganizationAccessService } from './organization-access.service';
+import { OrganizationAccessService } from './services/organization-access.service';
 import { AuditLogsModule } from '../modules/audit-logs/audit-logs.module';
 import { AuditLog } from '../modules/audit-logs/audit-logs.entity';
 
