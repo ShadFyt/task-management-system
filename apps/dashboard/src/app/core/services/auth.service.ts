@@ -13,6 +13,7 @@ import {
   filter,
   finalize,
   firstValueFrom,
+  lastValueFrom,
   switchMap,
   take,
   throwError,
@@ -81,11 +82,24 @@ export class AuthService {
     }
   }
 
-  logout(): void {
-    this.token.set(null);
-    this.user.set(null);
-    this.store.dispatch(resetAppState());
-    this.router.navigate(['/login']);
+  async logout(): Promise<void> {
+    try {
+      await lastValueFrom(
+        this.http.post(
+          `${this.API_URL}/auth/logout`,
+          {},
+          { withCredentials: true }
+        )
+      );
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Continue with client-side cleanup even if API call fails
+    } finally {
+      // Clear client-side state
+      this.resetState();
+      this.store.dispatch(resetAppState());
+      this.router.navigate(['/login']);
+    }
   }
 
   refreshAndRetry(req: HttpRequest<any>, next: HttpHandlerFn) {
@@ -141,5 +155,7 @@ export class AuthService {
   public resetState() {
     this.token.set(null);
     this.user.set(null);
+    this.refreshSubject.next(null);
+    this.isRefreshing.set(false);
   }
 }

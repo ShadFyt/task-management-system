@@ -40,6 +40,8 @@ class UserDto extends createZodDto(userSchema) {}
 class AuthResponseDto extends createZodDto(authResponseSchema) {}
 class AuthBodyDto extends createZodDto(authBodySchema) {}
 
+const REFRESH_TOKEN_COOKIE_KEY = 'refresh_token';
+
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
@@ -72,9 +74,18 @@ export class AuthController {
   @ApiResponse({ status: 204, description: 'Logout successful' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiBearerAuth('JWT-auth')
-  async logout(@Request() req: AuthenticatedRequest): Promise<void> {
+  async logout(
+    @Request() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response
+  ): Promise<void> {
     const user = req.user;
     await this.authService.logout(user.id);
+    res.clearCookie(REFRESH_TOKEN_COOKIE_KEY, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 0,
+    });
   }
 
   @ApiBearerAuth('JWT-auth')
@@ -108,12 +119,12 @@ export class AuthController {
   }
 
   private setRefreshTokenCookie(res: Response, refreshToken: string) {
-    res.cookie('refresh_token', refreshToken, {
+    res.cookie(REFRESH_TOKEN_COOKIE_KEY, refreshToken, {
       httpOnly: true,
       secure: false,
       sameSite: 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 7,
-      domain: '127.0.0.1',
+      // domain: '127.0.0.1',
     });
   }
 }

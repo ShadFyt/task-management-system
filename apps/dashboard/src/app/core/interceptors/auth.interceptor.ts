@@ -19,7 +19,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   return next(cloned).pipe(
     catchError((err) => {
       if (err.status === 401) {
-        if (req.context.get(RETRIED)) {
+        if (req.context.get(RETRIED) || !auth.token()) {
           auth.resetState();
           return throwError(() => err);
         }
