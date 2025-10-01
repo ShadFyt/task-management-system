@@ -9,7 +9,6 @@ import cookieParser from 'cookie-parser';
 
 import { AppModule } from './app/app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { DatabaseSeederService } from './app/core/database-seeder.service';
 import { cleanupOpenApiDoc } from 'nestjs-zod';
 
 async function bootstrap() {
@@ -31,10 +30,6 @@ async function bootstrap() {
   });
 
   app.use(cookieParser());
-  if (process.env.NODE_ENV === 'development') {
-    const seeder = app.get(DatabaseSeederService);
-    await seeder.seedAll();
-  }
   const config = new DocumentBuilder()
     .setTitle('Task Management System API')
     .setDescription('API documentation for Task Management System')

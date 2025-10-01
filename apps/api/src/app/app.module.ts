@@ -16,6 +16,7 @@ import { GlobalJwtAuthGuard } from './core/global-jwt-auth.guard';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { ZodSerializerInterceptor, ZodValidationPipe } from 'nestjs-zod';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { DatabaseSeederModule } from './database/database-seeder.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
     OrganizationsModule,
     TasksModule,
     AuditLogsModule,
+    DatabaseSeederModule,
   ],
   controllers: [AppController],
   providers: [
