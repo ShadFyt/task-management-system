@@ -193,7 +193,7 @@ export class Dashboard {
     this.filteredTasks().filter((task) => task.status === 'done')
   );
 
-  totalTasks = computed(() => this.taskService.tasks().length);
+  totalTasks = computed(() => this.filteredTasks().length);
 
   setFilter(filter: FilterType): void {
     this.store.dispatch(setFilter({ filter }));
@@ -218,7 +218,7 @@ export class Dashboard {
   getFilterCount(filter: FilterType): number {
     switch (filter) {
       case 'all':
-        return this.totalTasks();
+        return this.taskService.tasks().length;
       case 'personal':
         return this.personalTasks().length;
       case 'work':
