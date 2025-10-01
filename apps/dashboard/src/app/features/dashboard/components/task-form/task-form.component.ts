@@ -58,12 +58,7 @@ import { createTaskSchema } from '@task-management-system/data';
 
           <div>
             <label for="type" class="form-label"> Type * </label>
-            <select
-              id="type"
-              formControlName="type"
-              [class]="selectClasses()"
-              [disabled]="!hasAnyPermission()"
-            >
+            <select id="type" formControlName="type" [class]="selectClasses()">
               <option value="personal">Personal</option>
               @if (hasAnyPermission()) {
               <option value="work">Work</option>
@@ -152,7 +147,7 @@ export class TaskForm {
       ],
       content: ['', [zodValidator(createTaskSchema.shape.content)]],
       type: [
-        'personal',
+        'work',
         [Validators.required, zodValidator(createTaskSchema.shape.type)],
       ],
       priority: [
@@ -162,8 +157,12 @@ export class TaskForm {
     });
 
     effect(() => {
+      const typeControl = this.taskForm.get('type');
       if (!this.hasAnyPermission()) {
-        this.taskForm.patchValue({ type: 'personal' });
+        typeControl?.setValue('personal');
+        typeControl?.disable();
+      } else {
+        typeControl?.enable();
       }
     });
   }
