@@ -47,12 +47,14 @@ export class PermissionGuard implements CanActivate {
       ctx.getHandler()
     );
     const role = this.reflector.get<string>(REQ_ROLE, ctx.getHandler());
-    const { entity } = parsePermissionString(permission);
 
     // If neither permission nor role is required, allow access
     if (!permission && !role) {
       return true;
     }
+    const entity = permission
+      ? parsePermissionString(permission).entity
+      : undefined;
 
     // Role check first if present
     if (role) {

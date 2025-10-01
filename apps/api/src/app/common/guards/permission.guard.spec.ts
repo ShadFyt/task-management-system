@@ -263,6 +263,7 @@ describe('PermissionGuard', () => {
         reason: 'missing_role',
         route: '/test',
         metadata: { requiredRole: 'admin', requestMethod: 'GET' },
+        resourceType: 'user',
       });
 
       expect(auditSpy).toHaveBeenCalled();
@@ -277,6 +278,7 @@ describe('PermissionGuard', () => {
       await guard['logDeniedAccess'](userWithoutOrg, {
         reason: 'missing_permission',
         route: '/test',
+        resourceType: 'user',
       });
 
       expect(auditSpy).toHaveBeenCalledWith(
