@@ -5,6 +5,7 @@ import { firstValueFrom, catchError, finalize, throwError } from 'rxjs';
 import { API_BASE } from '../tokens';
 import { CreateTask, Task, UpdateTask } from '@task-management-system/data';
 import { selectSelectedOrgId } from '../../store';
+import { AuthService } from './auth.service';
 
 /**
  * TaskService - service for task management.
@@ -29,6 +30,7 @@ import { selectSelectedOrgId } from '../../store';
 export class TaskService {
   private http = inject(HttpClient);
   private store = inject(Store);
+  private auth = inject(AuthService);
 
   private readonly API_URL = inject(API_BASE);
   private selectedOrgId = this.store.selectSignal(selectSelectedOrgId);
@@ -130,6 +132,8 @@ export class TaskService {
 
   constructor() {
     effect(async () => {
+      // If not authenticated, do not load tasks
+      if (!this.auth.isAuthenticated()) return;
       // Trigger refetch when bump signal or selected organization changes
       this.bump();
       this.selectedOrgId();
