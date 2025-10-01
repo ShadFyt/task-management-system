@@ -173,8 +173,6 @@ export class TaskForm {
       return;
     }
     this._loading.set(true);
-    this._error.set(null);
-
     try {
       const formValue = this.taskForm.value;
       const taskData = {
@@ -182,10 +180,7 @@ export class TaskForm {
         dueDate: formValue.dueDate || undefined,
       };
       await this.taskService.createTask(taskData);
-      this.taskForm.reset({
-        type: 'personal',
-        priority: 'medium',
-      });
+      this.resetForm();
       this.taskCreated.emit();
     } catch (err: any) {
       this.handleError(err);
@@ -195,11 +190,7 @@ export class TaskForm {
   }
 
   onCancel(): void {
-    this.taskForm.reset({
-      type: 'personal',
-      priority: 'medium',
-    });
-    this._error.set(null);
+    this.resetForm();
     this.cancelled.emit();
   }
 
@@ -212,5 +203,13 @@ export class TaskForm {
     }
 
     this._error.set(errorMessage);
+  }
+
+  private resetForm(): void {
+    this.taskForm.reset({
+      type: 'personal',
+      priority: 'medium',
+    });
+    this._error.set(null);
   }
 }
