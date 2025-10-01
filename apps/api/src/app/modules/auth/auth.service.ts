@@ -11,9 +11,8 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Token } from './token.entity';
-import { UserDto } from '../users/users.dto';
-import { userSchema } from '@task-management-system/data';
 import { AuthBody, AuthResponse } from '@task-management-system/auth';
+import { userSchema, User } from '@task-management-system/data';
 import { User as UserEntity } from '../users/users.entity';
 import { randomUUID } from 'node:crypto';
 
@@ -28,7 +27,7 @@ export class AuthService {
     private tokenRepository: Repository<Token>
   ) {}
 
-  async validateUser(dto: AuthBody): Promise<UserDto | null> {
+  async validateUser(dto: AuthBody): Promise<User | null> {
     const { email, password } = dto;
     this.logger.log(`Validating user: ${email}`);
     const user = await this.userService.findOneByEmail(email);
