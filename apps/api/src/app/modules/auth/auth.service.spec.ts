@@ -8,7 +8,6 @@ import { AuthService } from './auth.service';
 import { UserService } from '../users/user.service';
 import { Token } from './token.entity';
 import { AuthBody } from '@task-management-system/auth';
-import { User } from '../users/users.entity';
 import mockUser from '../users/user.mock';
 
 jest.mock('bcrypt', () => ({
@@ -84,8 +83,11 @@ describe('AuthService', () => {
 
       const result = await service.validateUser(mockAuthBody);
 
-      const { password, ...rest } = mockUser;
-      expect(result).toEqual(rest);
+      expect(result).toEqual({
+        email: mockUser.email,
+        id: mockUser.id,
+        name: mockUser.name,
+      });
       expect(userService.findOneByEmail).toHaveBeenCalledWith(
         mockAuthBody.email
       );

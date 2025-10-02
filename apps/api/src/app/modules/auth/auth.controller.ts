@@ -20,7 +20,11 @@ import {
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { Public } from '../../core/public.decorator';
-import { userSchema, User } from '@task-management-system/data';
+import {
+  userSchema,
+  User,
+  AuthenticatedUser,
+} from '@task-management-system/data';
 import {
   authBodySchema,
   authResponseSchema,
@@ -29,7 +33,7 @@ import { createZodDto } from 'nestjs-zod';
 import { RefreshAuthGuard } from './jwt-auth.guard';
 
 interface AuthenticatedRequest extends Request {
-  user: User;
+  user: AuthenticatedUser;
 }
 
 interface AuthenticatedRefreshRequest extends Request {

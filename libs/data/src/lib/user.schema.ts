@@ -16,3 +16,11 @@ export const userSchema = z.object({
 });
 
 export type User = z.infer<typeof userSchema>;
+
+export const userBareSchema = userSchema.omit({
+  role: true,
+  organization: true,
+  subOrganizations: true,
+});
+
+export type AuthenticatedUser = z.infer<typeof userBareSchema>;

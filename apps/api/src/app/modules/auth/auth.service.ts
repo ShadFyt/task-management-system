@@ -12,7 +12,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Token } from './token.entity';
 import { AuthBody, AuthResponse } from '@task-management-system/auth';
-import { userSchema, User } from '@task-management-system/data';
+import {
+  AuthenticatedUser,
+  userBareSchema,
+  userSchema,
+} from '@task-management-system/data';
 import { User as UserEntity } from '../users/users.entity';
 import { randomUUID } from 'node:crypto';
 
@@ -27,13 +31,12 @@ export class AuthService {
     private tokenRepository: Repository<Token>
   ) {}
 
-  async validateUser(dto: AuthBody): Promise<User | null> {
+  async validateUser(dto: AuthBody): Promise<AuthenticatedUser | null> {
     const { email, password } = dto;
     this.logger.log(`Validating user: ${email}`);
     const user = await this.userService.findOneByEmail(email);
     if (user && (await this.comparePassword(password, user.password))) {
-      const { password: _, ...result } = user;
-      return result;
+      return userBareSchema.parse(user);
     }
     return null;
   }
