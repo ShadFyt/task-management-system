@@ -10,7 +10,7 @@ import {
   User,
   getAuditLogsResponseSchema,
 } from '@task-management-system/data';
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto, ZodResponse } from 'nestjs-zod';
 import { OrgIdQueryDto } from '../../common/dtos';
 
 class limitQueryDto extends createZodDto(limitQuerySchema) {}
@@ -35,7 +35,7 @@ export class AuditLogsController {
   @Get()
   @RequirePermission('read:audit-log')
   @ApiBearerAuth('JWT-auth')
-  @ApiResponse({
+  @ZodResponse({
     status: 200,
     description: 'List of tasks',
     type: GetAuditLogsResponseDto,

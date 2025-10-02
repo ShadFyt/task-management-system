@@ -31,7 +31,6 @@ export class OrganizationAccessService {
    *
    * @param authUser - The authenticated user attempting the action.
    * @param deniedOrgId - The ID of the organization the access attempt was denied for.
-   * @param action - The action the user attempted to perform.
    * @param [reason] - Optional reason for access denial. Defaults to 'access_denied'.
    * @return A promise that resolves when the access denial is logged.
    */

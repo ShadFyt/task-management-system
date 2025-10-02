@@ -6,7 +6,6 @@ import {
   Post,
   Request,
   UseGuards,
-  InternalServerErrorException,
   Req,
   Res,
 } from '@nestjs/common';
@@ -20,16 +19,12 @@ import {
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { Public } from '../../core/public.decorator';
-import {
-  userSchema,
-  User,
-  AuthenticatedUser,
-} from '@task-management-system/data';
+import { User, AuthenticatedUser } from '@task-management-system/data';
 import {
   authBodySchema,
   authResponseSchema,
 } from '@task-management-system/auth';
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto, ZodResponse } from 'nestjs-zod';
 import { RefreshAuthGuard } from './jwt-auth.guard';
 import { UserDto } from '../../common/dtos';
 
@@ -55,7 +50,7 @@ export class AuthController {
   @Post('login')
   @ApiOperation({ summary: 'User login' })
   @ApiBody({ type: AuthBodyDto })
-  @ApiResponse({
+  @ZodResponse({
     status: 200,
     description: 'Login successful',
     type: AuthResponseDto,
@@ -95,21 +90,23 @@ export class AuthController {
   @ApiBearerAuth('JWT-auth')
   @Get('self')
   @ApiOperation({ summary: 'Get current user' })
-  @ApiResponse({
+  @ZodResponse({
     status: 200,
     description: 'Current user info',
     type: UserDto,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async self(@Request() req: AuthenticatedRequest): Promise<User> {
-    const { success, data } = userSchema.safeParse(req.user);
-    if (!success)
-      throw new InternalServerErrorException('Failed to parse user data');
-    return data;
+    return req.user;
   }
 
   @Public()
   @UseGuards(RefreshAuthGuard)
+  @ZodResponse({
+    status: 200,
+    description: 'Refresh tokens successful',
+    type: AuthResponseDto,
+  })
   @Get('refresh')
   async refreshTokens(
     @Req() req: AuthenticatedRefreshRequest,

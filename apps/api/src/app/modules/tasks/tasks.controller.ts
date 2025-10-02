@@ -23,7 +23,7 @@ import {
 } from '@nestjs/swagger';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/rbac.decorators';
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto, ZodResponse } from 'nestjs-zod';
 import {
   createTaskSchema,
   Task,
@@ -51,13 +51,12 @@ export class TasksController {
     required: false,
     description: 'Organization ID to filter tasks by',
   })
-  @ApiResponse({ status: 200, description: 'List of tasks', type: [TaskDto] })
+  @ZodResponse({ status: 200, description: 'List of tasks', type: [TaskDto] })
   async findAllByUserOrg(
     @User() user: AuthUser,
     @Query() query: OrgIdQueryDto
   ): Promise<Task[]> {
-    const tasks = await this.service.findAllByUserOrg(user, query.orgId);
-    return taskSchema.array().parse(tasks);
+    return this.service.findAllByUserOrg(user, query.orgId);
   }
 
   /**
@@ -73,7 +72,7 @@ export class TasksController {
   @RequirePermission('create:task:own,any')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new task' })
-  @ApiResponse({
+  @ZodResponse({
     status: 201,
     description: 'Task created successfully',
     type: TaskDto,
@@ -84,8 +83,7 @@ export class TasksController {
     @Body() dto: CreateTaskDto,
     @Query() query: OrgIdQueryDto
   ): Promise<Task> {
-    const task = await this.service.createTask(user, dto, query.orgId);
-    return taskSchema.parse(task);
+    return this.service.createTask(user, dto, query.orgId);
   }
 
   /**
@@ -99,7 +97,7 @@ export class TasksController {
   @RequirePermission('update:task:own,any')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update an existing task' })
-  @ApiResponse({
+  @ZodResponse({
     status: 200,
     description: 'Task updated successfully',
     type: TaskDto,
