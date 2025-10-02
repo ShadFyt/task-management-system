@@ -17,6 +17,10 @@ export class UserRepo {
     private readonly repo: Repository<User>
   ) {}
 
+  async findAll(orgId: string): Promise<User[]> {
+    return this.repo.find({ where: { organizationId: orgId } });
+  }
+
   async findOneByEmail(email: string): Promise<User | null> {
     return this.repo.findOne({
       where: { email },
