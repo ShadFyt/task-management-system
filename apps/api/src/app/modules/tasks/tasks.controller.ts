@@ -29,13 +29,12 @@ import {
   Task,
   taskSchema,
   updateTaskSchema,
-  orgIdQuerySchema,
 } from '@task-management-system/data';
+import { OrgIdQueryDto } from '../../common/dtos';
 
 class CreateTaskDto extends createZodDto(createTaskSchema) {}
 class TaskDto extends createZodDto(taskSchema) {}
 class UpdateTaskDto extends createZodDto(updateTaskSchema) {}
-class orgIdQueryDto extends createZodDto(orgIdQuerySchema) {}
 
 @UseGuards(PermissionGuard)
 @ApiTags('tasks')
@@ -55,7 +54,7 @@ export class TasksController {
   @ApiResponse({ status: 200, description: 'List of tasks', type: [TaskDto] })
   async findAllByUserOrg(
     @User() user: AuthUser,
-    @Query() query: orgIdQueryDto
+    @Query() query: OrgIdQueryDto
   ): Promise<Task[]> {
     const tasks = await this.service.findAllByUserOrg(user, query.orgId);
     return taskSchema.array().parse(tasks);
@@ -83,7 +82,7 @@ export class TasksController {
   async createTask(
     @User() user: AuthUser,
     @Body() dto: CreateTaskDto,
-    @Query() query: orgIdQueryDto
+    @Query() query: OrgIdQueryDto
   ): Promise<Task> {
     const task = await this.service.createTask(user, dto, query.orgId);
     return taskSchema.parse(task);

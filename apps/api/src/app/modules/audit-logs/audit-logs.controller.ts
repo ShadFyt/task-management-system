@@ -7,13 +7,12 @@ import {
   GetAuditLogsResponse,
   limitQuerySchema,
   offsetQuerySchema,
-  orgIdQuerySchema,
   User,
   getAuditLogsResponseSchema,
 } from '@task-management-system/data';
 import { createZodDto } from 'nestjs-zod';
+import { OrgIdQueryDto } from '../../common/dtos';
 
-class orgIdQueryDto extends createZodDto(orgIdQuerySchema) {}
 class limitQueryDto extends createZodDto(limitQuerySchema) {}
 class offsetQueryDto extends createZodDto(offsetQuerySchema) {}
 class GetAuditLogsResponseDto extends createZodDto(
@@ -43,7 +42,7 @@ export class AuditLogsController {
   })
   async getAuditLogs(
     @Request() req: { user: User },
-    @Query() orgId: orgIdQueryDto,
+    @Query() orgId: OrgIdQueryDto,
     @Query() limit: limitQueryDto,
     @Query() offset: offsetQueryDto
   ): Promise<GetAuditLogsResponse> {

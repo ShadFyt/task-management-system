@@ -31,6 +31,7 @@ import {
 } from '@task-management-system/auth';
 import { createZodDto } from 'nestjs-zod';
 import { RefreshAuthGuard } from './jwt-auth.guard';
+import { UserDto } from '../../common/dtos';
 
 interface AuthenticatedRequest extends Request {
   user: AuthenticatedUser;
@@ -40,7 +41,6 @@ interface AuthenticatedRefreshRequest extends Request {
   user: { sub: string; email: string };
 }
 
-class UserDto extends createZodDto(userSchema) {}
 class AuthResponseDto extends createZodDto(authResponseSchema) {}
 class AuthBodyDto extends createZodDto(authBodySchema) {}
 
