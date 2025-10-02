@@ -13,6 +13,7 @@ import {
 } from '@task-management-system/data';
 import { Organization } from '../modules/organizations/organizations.entity';
 import { isNil } from '@nestjs/common/utils/shared.utils';
+import { PermissionString } from '@task-management-system/auth';
 
 const defaultRoles: Array<{ name: RoleName; description: string }> = [
   { name: 'owner', description: 'Full system access and ownership' },
@@ -128,13 +129,33 @@ const defaultPermissions: Array<{
     access: 'any',
     description: 'Read audit logs',
   },
+  {
+    action: 'delete',
+    entity: 'audit-log',
+    access: 'any',
+    description: 'Delete audit logs',
+  },
+
+  // Organization permissions
+  {
+    action: 'read',
+    entity: 'organization',
+    access: 'own',
+    description: 'Read own organization',
+  },
+  {
+    action: 'read',
+    entity: 'organization',
+    access: 'any',
+    description: 'Read own organization and sub-organizations',
+  },
 ];
 
 /**
  * Role-based permission mappings
  * Defines which permissions each role should have
  */
-const rolePermissionMappings: Record<RoleName, string[]> = {
+const rolePermissionMappings: Record<RoleName, PermissionString[]> = {
   owner: [
     // Full access to everything
     'create:task:any',
@@ -146,17 +167,20 @@ const rolePermissionMappings: Record<RoleName, string[]> = {
     'update:user:any',
     'delete:user:any',
     'read:audit-log:any',
+    'delete:audit-log:any',
+    'read:organization:any',
   ],
   admin: [
     // Can manage tasks and users, view audit logs
     'create:task:any',
-    'read:task:any',  // can read sub-org tasks
+    'read:task:any', // can read sub-org tasks
     'update:task:any',
     'delete:task:any',
     'create:user:any',
     'read:user:any',
     'update:user:any',
     'read:audit-log:any',
+    'read:organization:any',
   ],
   viewer: [
     // Can read all tasks in organization and manage own profile
@@ -167,6 +191,7 @@ const rolePermissionMappings: Record<RoleName, string[]> = {
     'update:task:own',
     'delete:task:own',
     'create:task:own', // can create personal tasks
+    'read:organization:own',
   ],
 };
 
@@ -333,7 +358,7 @@ export class DatabaseSeederService {
 
       // Find matching permissions for this role
       const rolePermissions = savedPermissions.filter((permission) => {
-        const permissionString = `${permission.action}:${permission.entity}:${permission.access}`;
+        const permissionString: PermissionString = `${permission.action}:${permission.entity}:${permission.access}`;
         return permissionStrings.includes(permissionString);
       });
 

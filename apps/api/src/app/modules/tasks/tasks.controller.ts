@@ -12,7 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
-import { AuthUser } from '../auth/auth.type';
+import { User as AuthUser } from '@task-management-system/data';
 import { User } from '../../common/decorators/user.decorator';
 import {
   ApiBearerAuth,

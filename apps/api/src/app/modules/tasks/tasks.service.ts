@@ -52,8 +52,7 @@ export class TasksService {
     };
     const queryId = this.organizationAccessService.validateAccess(
       authUser,
-      orgId,
-      'read'
+      orgId
     );
     baseAuditLogData.organizationId = queryId;
     this.auditLogsService.createAuditLog(baseAuditLogData);
@@ -87,8 +86,7 @@ export class TasksService {
 
     const queryId = this.organizationAccessService.validateAccess(
       authUser,
-      orgId,
-      'create'
+      orgId
     );
 
     if (dto.type === 'work') {
@@ -159,8 +157,7 @@ export class TasksService {
 
     this.organizationAccessService.validateAccess(
       authUser,
-      task.organizationId,
-      'update'
+      task.organizationId
     );
 
     // Check if user can access this task
@@ -231,8 +228,7 @@ export class TasksService {
 
     this.organizationAccessService.validateAccess(
       authUser,
-      task.organizationId,
-      'delete'
+      task.organizationId
     );
 
     // Check if user can access this task
@@ -311,88 +307,4 @@ export class TasksService {
 
     return false;
   }
-
-  // /**
-  //  * Validates if the user has access to the specified organization - org scope
-  //  * @param authUser - The authenticated user object
-  //  * @param orgId - The organization ID to validate (optional, defaults to user's org)
-  //  * @param action - The action being performed (for error message context)
-  //  * @throws ForbiddenException if user doesn't have access to the organization
-  //  * @returns The validated organization ID
-  //  */
-  // private validateOrganizationAccess(
-  //   authUser: AuthUser,
-  //   orgId: string | undefined,
-  //   action: PermissionAction
-  // ): string {
-  //   const targetOrgId = orgId ?? authUser.organization.id;
-  //
-  //   // Check permission based on organization relationship
-  //   const permissionResult = checkOrganizationPermission(
-  //     authUser,
-  //     targetOrgId,
-  //     'task',
-  //     action
-  //   );
-  //
-  //   if (!permissionResult.hasAccess) {
-  //     this.logAccessDenied(
-  //       authUser,
-  //       targetOrgId,
-  //       action,
-  //       permissionResult.reason
-  //     );
-  //     throw new ForbiddenException(permissionResult.errorMessage);
-  //   }
-  //
-  //   return targetOrgId;
-  // }
-  //
-  // /**
-  //  * Logs an access denied event for a user attempting to perform an action on an organization.
-  //  *
-  //  * @param authUser - The authenticated user attempting the action.
-  //  * @param deniedOrgId - The ID of the organization the access attempt was denied for.
-  //  * @param action - The action the user attempted to perform.
-  //  * @param [reason] - Optional reason for access denial. Defaults to 'access_denied'.
-  //  * @return A promise that resolves when the access denial is logged.
-  //  */
-  // private async logAccessDenied(
-  //   authUser: AuthUser,
-  //   deniedOrgId: string,
-  //   action: PermissionAction,
-  //   reason?: string
-  // ): Promise<void> {
-  //   const auditLogData: CreateAuditLogData = {
-  //     actorUserId: authUser.id,
-  //     action: `organization_access_denied`,
-  //     resourceId: deniedOrgId,
-  //     resourceType: 'organization',
-  //     outcome: 'failure',
-  //     organizationId: authUser.organization.id, // User's actual org, not denied org
-  //     metadata: {
-  //       deniedOrganizationId: deniedOrgId,
-  //       attemptedAction: action,
-  //       denialReason: reason || 'access_denied',
-  //       userPermissions: this.summarizeUserPermissions(authUser),
-  //       timestamp: new Date().toISOString(),
-  //     },
-  //   };
-  //
-  //   this.auditLogsService.createAuditLog(auditLogData);
-  // }
-  //
-  // /**
-  //  * Summarizes the permissions of the authenticated user.
-  //  *
-  //  * @param authUser - The authenticated user whose permissions are being summarized.
-  //  * @return An object containing the user's organization ID, the count of sub-organizations, and the IDs of the sub-organizations.
-  //  */
-  // private summarizeUserPermissions(authUser: AuthUser): object {
-  //   return {
-  //     organizationId: authUser.organization.id,
-  //     subOrganizationCount: authUser.subOrganizations.length,
-  //     subOrganizationIds: authUser.subOrganizations.map((org) => org.id),
-  //   };
-  // }
 }

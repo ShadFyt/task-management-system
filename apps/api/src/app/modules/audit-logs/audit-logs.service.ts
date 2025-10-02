@@ -48,12 +48,7 @@ export class AuditLogsService {
     orgId?: string
   ): Promise<GetAuditLogsResponse> {
     const targetOrgId = orgId ?? authUser.organization.id;
-    const permissionResult = checkOrganizationPermission(
-      authUser,
-      targetOrgId,
-      'audit-log',
-      'read'
-    );
+    const permissionResult = checkOrganizationPermission(authUser, targetOrgId);
     if (!permissionResult.hasAccess) {
       this.createAuditLog({
         action: 'organization_access_denied',

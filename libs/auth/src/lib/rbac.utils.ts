@@ -120,16 +120,12 @@ interface PermissionCheckResult {
  *
  * @param authUser - The authenticated user requesting access.
  * @param targetOrgId - The ID of the organization being targeted.
- * @param entity - The entity for which the permission is being checked.
- * @param action - The desired action that the user wants to perform.
  * @return An object indicating whether the user has access, and
  * potentially including reasons and error messages if access is denied.
  */
 export const checkOrganizationPermission = (
   authUser: AuthUser,
-  targetOrgId: string,
-  entity: PermissionEntity,
-  action: PermissionAction
+  targetOrgId: string
 ): PermissionCheckResult => {
   const { organization, subOrganizations } = authUser;
 
@@ -151,12 +147,17 @@ export const checkOrganizationPermission = (
   }
 
   // Check permissions for sub organization access
-  const hasPermission = checkPermission(authUser.role, entity, action, 'any');
+  const hasPermission = checkPermission(
+    authUser.role,
+    'organization',
+    'read',
+    'any'
+  );
   if (!hasPermission) {
     return {
       hasAccess: false,
       reason: 'insufficient_sub_org_permissions',
-      errorMessage: `Insufficient permissions to ${action} in sub-organization`,
+      errorMessage: `Insufficient permissions`,
     };
   }
 

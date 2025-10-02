@@ -67,14 +67,12 @@ describe('OrganizationAccessService', () => {
         errorMessage: '',
       });
 
-      const result = service.validateAccess(mockAuthUser, mockOrg.id, 'read');
+      const result = service.validateAccess(mockAuthUser, mockOrg.id);
 
       expect(result).toBe(mockOrg.id);
       expect(mockedCheckOrganizationPermission).toHaveBeenCalledWith(
         mockAuthUser,
-        mockOrg.id,
-        'task',
-        'read'
+        mockOrg.id
       );
     });
 
@@ -84,14 +82,12 @@ describe('OrganizationAccessService', () => {
         errorMessage: '',
       });
 
-      const result = service.validateAccess(mockAuthUser, undefined, 'create');
+      const result = service.validateAccess(mockAuthUser, undefined);
 
       expect(result).toBe(mockOrg.id);
       expect(mockedCheckOrganizationPermission).toHaveBeenCalledWith(
         mockAuthUser,
-        mockOrg.id,
-        'task',
-        'create'
+        mockOrg.id
       );
     });
 
@@ -101,18 +97,12 @@ describe('OrganizationAccessService', () => {
         errorMessage: '',
       });
 
-      const result = service.validateAccess(
-        mockAuthUser,
-        mockSubOrg1.id,
-        'update'
-      );
+      const result = service.validateAccess(mockAuthUser, mockSubOrg1.id);
 
       expect(result).toBe(mockSubOrg1.id);
       expect(mockedCheckOrganizationPermission).toHaveBeenCalledWith(
         mockAuthUser,
-        mockSubOrg1.id,
-        'task',
-        'update'
+        mockSubOrg1.id
       );
     });
 
@@ -126,11 +116,11 @@ describe('OrganizationAccessService', () => {
       });
 
       expect(() =>
-        service.validateAccess(mockAuthUser, mockSubOrg1.id, 'read')
+        service.validateAccess(mockAuthUser, mockSubOrg1.id)
       ).toThrow(ForbiddenException);
 
       expect(() =>
-        service.validateAccess(mockAuthUser, mockSubOrg1.id, 'read')
+        service.validateAccess(mockAuthUser, mockSubOrg1.id)
       ).toThrow(errorMessage);
     });
 
@@ -145,11 +135,11 @@ describe('OrganizationAccessService', () => {
       });
 
       expect(() =>
-        service.validateAccess(mockAuthUser, unrelatedOrgId, 'delete')
+        service.validateAccess(mockAuthUser, unrelatedOrgId)
       ).toThrow(ForbiddenException);
 
       expect(() =>
-        service.validateAccess(mockAuthUser, unrelatedOrgId, 'delete')
+        service.validateAccess(mockAuthUser, unrelatedOrgId)
       ).toThrow(errorMessage);
     });
 
@@ -162,7 +152,7 @@ describe('OrganizationAccessService', () => {
       });
 
       expect(() =>
-        service.validateAccess(mockAuthUser, mockSubOrg1.id, 'create')
+        service.validateAccess(mockAuthUser, mockSubOrg1.id)
       ).toThrow(ForbiddenException);
 
       expect(auditLogsService.createAuditLog).toHaveBeenCalledWith(
@@ -175,7 +165,6 @@ describe('OrganizationAccessService', () => {
           organizationId: mockAuthUser.organization.id,
           metadata: expect.objectContaining({
             deniedOrganizationId: mockSubOrg1.id,
-            attemptedAction: 'create',
             denialReason: 'insufficient_permissions',
             userPermissions: {
               organizationId: mockAuthUser.organization.id,
@@ -197,50 +186,42 @@ describe('OrganizationAccessService', () => {
     });
 
     it('should validate create action', () => {
-      const result = service.validateAccess(mockAuthUser, 'org-123', 'create');
+      const result = service.validateAccess(mockAuthUser, 'org-123');
 
       expect(result).toBe('org-123');
       expect(mockedCheckOrganizationPermission).toHaveBeenCalledWith(
         mockAuthUser,
-        'org-123',
-        'task',
-        'create'
+        mockOrg.id
       );
     });
 
     it('should validate read action', () => {
-      const result = service.validateAccess(mockAuthUser, 'org-123', 'read');
+      const result = service.validateAccess(mockAuthUser, 'org-123');
 
       expect(result).toBe('org-123');
       expect(mockedCheckOrganizationPermission).toHaveBeenCalledWith(
         mockAuthUser,
-        'org-123',
-        'task',
-        'read'
+        mockOrg.id
       );
     });
 
     it('should validate update action', () => {
-      const result = service.validateAccess(mockAuthUser, 'org-123', 'update');
+      const result = service.validateAccess(mockAuthUser, mockOrg.id);
 
-      expect(result).toBe('org-123');
+      expect(result).toBe(mockOrg.id);
       expect(mockedCheckOrganizationPermission).toHaveBeenCalledWith(
         mockAuthUser,
-        'org-123',
-        'task',
-        'update'
+        mockOrg.id
       );
     });
 
     it('should validate delete action', () => {
-      const result = service.validateAccess(mockAuthUser, 'org-123', 'delete');
+      const result = service.validateAccess(mockAuthUser, mockOrg.id);
 
-      expect(result).toBe('org-123');
+      expect(result).toBe(mockOrg.id);
       expect(mockedCheckOrganizationPermission).toHaveBeenCalledWith(
         mockAuthUser,
-        'org-123',
-        'task',
-        'delete'
+        mockOrg.id
       );
     });
   });
@@ -258,7 +239,7 @@ describe('OrganizationAccessService', () => {
       });
 
       expect(() =>
-        service.validateAccess(mockAuthUser, mockSubOrg2.id, 'update')
+        service.validateAccess(mockAuthUser, mockSubOrg2.id)
       ).toThrow(ForbiddenException);
 
       expect(auditLogsService.createAuditLog).toHaveBeenCalledWith({
@@ -270,7 +251,6 @@ describe('OrganizationAccessService', () => {
         organizationId: mockAuthUser.organization.id,
         metadata: {
           deniedOrganizationId: mockSubOrg2.id,
-          attemptedAction: 'update',
           denialReason: 'test_reason',
           userPermissions: {
             organizationId: mockAuthUser.organization.id,
@@ -288,9 +268,9 @@ describe('OrganizationAccessService', () => {
         errorMessage: 'Access denied',
       });
 
-      expect(() =>
-        service.validateAccess(mockAuthUser, 'sub-org-123', 'read')
-      ).toThrow(ForbiddenException);
+      expect(() => service.validateAccess(mockAuthUser, 'sub-org-123')).toThrow(
+        ForbiddenException
+      );
 
       expect(auditLogsService.createAuditLog).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -314,7 +294,7 @@ describe('OrganizationAccessService', () => {
       });
 
       expect(() =>
-        service.validateAccess(userWithNoSubOrgs, 'other-org', 'create')
+        service.validateAccess(userWithNoSubOrgs, 'other-org')
       ).toThrow(ForbiddenException);
 
       expect(auditLogsService.createAuditLog).toHaveBeenCalledWith(
@@ -348,7 +328,7 @@ describe('OrganizationAccessService', () => {
       });
 
       expect(() =>
-        service.validateAccess(userWithManySubOrgs, 'other-org', 'read')
+        service.validateAccess(userWithManySubOrgs, 'other-org')
       ).toThrow(ForbiddenException);
 
       expect(auditLogsService.createAuditLog).toHaveBeenCalledWith(
@@ -373,7 +353,7 @@ describe('OrganizationAccessService', () => {
         errorMessage: '',
       });
 
-      service.validateAccess(mockAuthUser, 'org-123', 'read');
+      service.validateAccess(mockAuthUser, 'org-123');
 
       expect(auditLogsService.createAuditLog).not.toHaveBeenCalled();
     });

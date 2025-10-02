@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { AuditLogsService } from '../../modules/audit-logs/audit-logs.service';
 import { checkOrganizationPermission } from '@task-management-system/auth';
-import { PermissionAction } from '@task-management-system/data';
+
 import { User as AuthUser } from '@task-management-system/data';
 import { CreateAuditLogData } from '../../modules/audit-logs/audit-log.types';
 
@@ -12,28 +12,14 @@ export class OrganizationAccessService {
   /**
    * Validates organization access and logs failures
    */
-  validateAccess(
-    authUser: AuthUser,
-    orgId: string | undefined,
-    action: PermissionAction
-  ): string {
+  validateAccess(authUser: AuthUser, orgId: string | undefined): string {
     const targetOrgId = orgId ?? authUser.organization.id;
 
     // Check permission based on organization relationship
-    const permissionResult = checkOrganizationPermission(
-      authUser,
-      targetOrgId,
-      'task',
-      action
-    );
+    const permissionResult = checkOrganizationPermission(authUser, targetOrgId);
 
     if (!permissionResult.hasAccess) {
-      this.logAccessDenied(
-        authUser,
-        targetOrgId,
-        action,
-        permissionResult.reason
-      );
+      this.logAccessDenied(authUser, targetOrgId, permissionResult.reason);
       throw new ForbiddenException(permissionResult.errorMessage);
     }
 
@@ -52,7 +38,6 @@ export class OrganizationAccessService {
   private async logAccessDenied(
     authUser: AuthUser,
     deniedOrgId: string,
-    action: PermissionAction,
     reason?: string
   ): Promise<void> {
     const auditLogData: CreateAuditLogData = {
@@ -64,7 +49,6 @@ export class OrganizationAccessService {
       organizationId: authUser.organization.id, // User's actual org, not denied org
       metadata: {
         deniedOrganizationId: deniedOrgId,
-        attemptedAction: action,
         denialReason: reason || 'access_denied',
         userPermissions: this.summarizeUserPermissions(authUser),
         timestamp: new Date().toISOString(),
