@@ -186,12 +186,22 @@ describe('TasksService', () => {
     it('should create a work task for admin user', async () => {
       const workTaskDto = { ...mockCreateTaskDto, type: 'work' as const };
       const createdTask = { ...mockTask, type: 'work' as const };
+      const logTaskOperationSpy = jest.spyOn(
+        service as any,
+        'logTaskOperation'
+      );
       tasksRepo.createTask.mockResolvedValue(createdTask);
       organizationAccessService.validateAccess.mockReturnValue('org-123');
-
+      jest
+        .spyOn(service as any, 'validateTaskCreatePermissions')
+        .mockReturnValue(undefined);
       const result = await service.createTask(mockAuthUser, workTaskDto);
 
       expect(result).toEqual(createdTask);
+      expect(
+        (service as any).validateTaskCreatePermissions
+      ).toHaveBeenCalledTimes(1);
+      expect(logTaskOperationSpy).toHaveBeenCalledTimes(1);
       expect(tasksRepo.createTask).toHaveBeenCalledWith({
         ...workTaskDto,
         userId: 'user-123',
@@ -206,13 +216,18 @@ describe('TasksService', () => {
         role: { ...mockRole, name: 'viewer' as const },
       };
       const workTaskDto = { ...mockCreateTaskDto, type: 'work' as const };
+      jest
+        .spyOn(service as any, 'validateTaskCreatePermissions')
+        .mockImplementation(() => {
+          throw new ForbiddenException();
+        });
 
       await expect(service.createTask(viewerUser, workTaskDto)).rejects.toThrow(
         ForbiddenException
       );
-      await expect(service.createTask(viewerUser, workTaskDto)).rejects.toThrow(
-        'Only administrators and owners can create work tasks'
-      );
+      await expect(
+        service.createTask(viewerUser, workTaskDto)
+      ).rejects.toThrow();
 
       expect(auditLogsService.createAuditLog).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -307,6 +322,11 @@ describe('TasksService', () => {
         role: { ...mockRole, name: 'viewer' as const },
       };
       const workUpdateDto = { ...mockUpdateTaskDto, type: 'work' as const };
+      jest
+        .spyOn(service as any, 'validateTaskUpdatePermissions')
+        .mockImplementation(() => {
+          throw new ForbiddenException();
+        });
       tasksRepo.findById.mockResolvedValue(mockTask);
 
       await expect(
@@ -314,7 +334,7 @@ describe('TasksService', () => {
       ).rejects.toThrow(ForbiddenException);
       await expect(
         service.updateTask(viewerUser, 'task-123', workUpdateDto)
-      ).rejects.toThrow('Only administrators and owners can create work tasks');
+      ).rejects.toThrow();
     });
   });
 

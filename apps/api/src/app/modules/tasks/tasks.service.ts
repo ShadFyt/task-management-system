@@ -58,66 +58,41 @@ export class TasksService {
     this.auditLogsService.createAuditLog(baseAuditLogData);
     return this.repo.findTasksForUser([queryId], authUser.id);
   }
-
   /**
    * Creates a new task for the authenticated user within their organization.
    * Applies permission checking based on task type:
    * - Personal tasks: Anyone can create (always owned by creator)
-   * - Work tasks: Only admin/owner roles can create
+   * - Work tasks: Only users with create:task:any permission can create
    */
   async createTask(
     authUser: AuthUser,
     dto: CreateTask,
     orgId?: string
   ): Promise<Task> {
-    const { id, organization, role } = authUser;
-
-    const baseAuditLogData: CreateAuditLogData = {
-      action: 'create',
-      resourceType: 'task',
-      organizationId: organization.id,
-      route: '/tasks',
-      metadata: dto,
-      actorUserId: id,
-      actorEmail: authUser.email,
-      outcome: 'success',
-      resourceId: '',
-    };
-
-    const queryId = this.organizationAccessService.validateAccess(
-      authUser,
-      orgId
-    );
-
-    if (dto.type === 'work') {
-      if (!['admin', 'owner'].includes(role.name)) {
-        this.logger.warn(
-          `User ${id} (${role.name}) is not authorized to create work tasks`
-        );
-        baseAuditLogData.outcome = 'failure';
-        this.auditLogsService.createAuditLog(baseAuditLogData);
-
-        throw new ForbiddenException(
-          'Only administrators and owners can create work tasks'
-        );
-      }
-    }
-
     try {
+      // Validate organization access
+      const targetOrgId = this.organizationAccessService.validateAccess(
+        authUser,
+        orgId
+      );
+
+      // Validate permissions for work tasks
+      this.validateTaskCreatePermissions(authUser, dto);
+
+      // Create the task
       const task = await this.repo.createTask({
         ...dto,
-        userId: id,
-        organizationId: queryId,
+        userId: authUser.id,
+        organizationId: targetOrgId,
         status: 'todo',
       });
 
-      baseAuditLogData.resourceId = task.id;
-      this.auditLogsService.createAuditLog(baseAuditLogData);
+      await this.logTaskOperation('create', authUser, task.id, 'success', dto);
+
       return task;
-    } catch (e) {
-      baseAuditLogData.outcome = 'failure';
-      this.auditLogsService.createAuditLog(baseAuditLogData);
-      throw e;
+    } catch (error) {
+      await this.logTaskOperation('create', authUser, '', 'failure', dto);
+      throw error;
     }
   }
 
@@ -133,178 +108,218 @@ export class TasksService {
     taskId: string,
     dto: UpdateTask
   ): Promise<Task> {
-    const { id, organization } = authUser;
-
-    const baseAuditLogData: CreateAuditLogData = {
-      action: 'update',
-      resourceType: 'task',
-      organizationId: organization.id,
-      route: `/tasks/${taskId}`,
-      metadata: dto,
-      actorUserId: id,
-      actorEmail: authUser.email,
-      outcome: 'success',
-      resourceId: taskId,
-    };
-
-    // Find the task with relations
-    const task = await this.repo.findById(taskId);
-    if (!task) {
-      baseAuditLogData.outcome = 'failure';
-      this.auditLogsService.createAuditLog(baseAuditLogData);
-      throw new NotFoundException('Task not found');
-    }
-
-    this.organizationAccessService.validateAccess(
-      authUser,
-      task.organizationId
-    );
-
-    // Check if user can access this task
-    const canAccess = this.canUserAccessTask(
-      authUser,
-      task,
-      'update:task:own,any'
-    );
-    console.log('canAccess', canAccess);
-    if (!canAccess) {
-      this.logger.warn(
-        `User ${id} attempted to update task ${taskId} without permission`
-      );
-      baseAuditLogData.outcome = 'failure';
-      this.auditLogsService.createAuditLog(baseAuditLogData);
-      throw new ForbiddenException(
-        'You do not have permission to update this task'
-      );
-    }
-
-    // Additional validation for work tasks
-    if (dto.type === 'work' && task.type !== 'work') {
-      if (!['admin', 'owner'].includes(authUser.role.name)) {
-        this.logger.warn(
-          `User ${id} (${authUser.role.name}) attempted to change task to work type`
-        );
-        baseAuditLogData.outcome = 'failure';
-        this.auditLogsService.createAuditLog(baseAuditLogData);
-        throw new ForbiddenException(
-          'Only administrators and owners can create work tasks'
-        );
+    try {
+      const task = await this.repo.findById(taskId);
+      if (!task) {
+        throw new NotFoundException('Task not found');
       }
+
+      // Validate organization access
+      this.organizationAccessService.validateAccess(
+        authUser,
+        task.organizationId
+      );
+
+      // Validate task-specific permissions
+      this.validateTaskUpdatePermissions(authUser, task, dto);
+
+      const updatedTask = await this.repo.updateTask(taskId, dto);
+      await this.logTaskOperation('update', authUser, taskId, 'success', dto);
+      return updatedTask;
+    } catch (error) {
+      // Log failure
+      await this.logTaskOperation('update', authUser, taskId, 'failure', dto);
+      throw error;
     }
-
-    const updatedTask = await this.repo.updateTask(taskId, dto);
-    this.auditLogsService.createAuditLog(baseAuditLogData);
-
-    return updatedTask;
   }
 
   /**
-   * Deletes a task with permission and ownership validation
+   * Deletes a task with permission validation
    * @param authUser - The authenticated user object
    * @param taskId - The ID of the task to delete
    */
   async deleteTask(authUser: AuthUser, taskId: string): Promise<void> {
-    const { id, organization } = authUser;
+    try {
+      const task = await this.repo.findById(taskId);
+      if (!task) {
+        throw new NotFoundException('Task not found');
+      }
 
-    const baseAuditLogData: CreateAuditLogData = {
-      action: 'delete',
-      resourceType: 'task',
-      organizationId: organization.id,
-      route: `/tasks/${taskId}`,
-      metadata: { taskId },
-      actorUserId: id,
-      actorEmail: authUser.email,
-      outcome: 'success',
-      resourceId: taskId,
-    };
-
-    // Find the task with relations
-    const task = await this.repo.findById(taskId);
-    if (!task) {
-      baseAuditLogData.outcome = 'failure';
-      this.auditLogsService.createAuditLog(baseAuditLogData);
-      throw new NotFoundException('Task not found');
-    }
-
-    this.organizationAccessService.validateAccess(
-      authUser,
-      task.organizationId
-    );
-
-    // Check if user can access this task
-    const canAccess = this.canUserAccessTask(
-      authUser,
-      task,
-      'delete:task:own,any'
-    );
-    if (!canAccess) {
-      this.logger.warn(
-        `User ${id} attempted to delete task ${taskId} without permission`
+      // Validate organization access
+      this.organizationAccessService.validateAccess(
+        authUser,
+        task.organizationId
       );
-      baseAuditLogData.outcome = 'failure';
-      this.auditLogsService.createAuditLog(baseAuditLogData);
-      throw new ForbiddenException(
-        'You do not have permission to delete this task'
-      );
-    }
 
-    await this.repo.deleteTask(taskId);
-    this.auditLogsService.createAuditLog(baseAuditLogData);
+      // Validate task specific permissions
+      if (!this.canUserAccessTask(authUser, task, 'delete:task:own,any')) {
+        this.logger.warn(
+          `User ${authUser.id} attempted to delete task ${taskId} without permission`
+        );
+        throw new ForbiddenException(
+          'You do not have permission to delete this task'
+        );
+      }
+
+      await this.repo.deleteTask(taskId);
+      await this.logTaskOperation('delete', authUser, taskId, 'success', {
+        taskId,
+      });
+    } catch (error) {
+      await this.logTaskOperation('delete', authUser, taskId, 'failure', {
+        taskId,
+      });
+      throw error;
+    }
   }
 
   /**
-   * Checks if the user can access the task based on the required permission.
+   * Checks if the user can access the task based on ownership and permissions.
+   * Note: Organization access should be validated separately using OrganizationAccessService
+   *
    * @param user - The authenticated user
-   * @param task - The task with user and organization relations
+   * @param task - The task to check access for
    * @param requiredPermission - The permission string required to access the task
    * @returns true if the user has access, false otherwise
    */
   private canUserAccessTask(
     user: AuthUser,
-    task: Task, // Task with user and organization relations
+    task: Task,
     requiredPermission: PermissionString
-  ) {
+  ): boolean {
     if (!user || !user.role) {
-      return false;
-    }
-
-    // Check if user has the required permission
-    const hasPermission = checkPermissionByString(
-      user.role,
-      requiredPermission
-    );
-    if (!hasPermission) {
       return false;
     }
 
     const { access, entity, action } =
       parsePermissionString(requiredPermission);
 
-    // If no access is specified, allow access (permission without scope)
+    // If no access scope is specified, just check if user has the permission
     if (!access || access.length === 0) {
-      return true;
+      return checkPermissionByString(user.role, requiredPermission);
     }
 
-    // Check if permission includes "own" access and user owns the task
+    // Check "own" scope - user owns the task AND has the "own" permission
     if (access.includes('own') && task.userId === user.id) {
-      return true;
+      const hasOwnPermission = checkPermission(
+        user.role,
+        entity,
+        action,
+        'own'
+      );
+      if (hasOwnPermission) {
+        return true;
+      }
     }
 
-    // Should hasAnyPermission be allowed for personal tasks? maybe we should prevent this
-    // If permission includes "any" user is admin or owner
-    const hasAnyPermission = checkPermission(user.role, entity, action, 'any');
-
-    // Check if user permission includes "any" access and user is in same organization scope
-    if (hasAnyPermission) {
-      // Get user's organization and its children
-      const userOrgIds = [user.organization.id];
-      if (user.subOrganizations) {
-        userOrgIds.push(...user.subOrganizations.map((org) => org.id));
+    // Check "any" scope - user has the "any" permission
+    // Note: Org hierarchy validation should be handled by OrganizationAccessService
+    if (access.includes('any')) {
+      const hasAnyPermission = checkPermission(
+        user.role,
+        entity,
+        action,
+        'any'
+      );
+      if (hasAnyPermission) {
+        return true;
       }
-
-      return userOrgIds.includes(task.organizationId);
     }
 
     return false;
+  }
+
+  /**
+   * Validates permissions for creating a task
+   * Work tasks require special permission
+   */
+  private validateTaskCreatePermissions(
+    authUser: AuthUser,
+    dto: CreateTask
+  ): void {
+    // Work tasks require elevated permissions
+    if (dto.type === 'work') {
+      const hasWorkTaskPermission = checkPermissionByString(
+        authUser.role,
+        'create:task:any'
+      );
+
+      if (!hasWorkTaskPermission) {
+        this.logger.warn(
+          `User ${authUser.id} (${authUser.role.name}) attempted to create a work task without permission`
+        );
+        throw new ForbiddenException(
+          'Only administrators and owners can create work tasks'
+        );
+      }
+    }
+    // Personal tasks don't require special permissions - anyone can create them
+  }
+
+  /**
+   * Validates permissions for updating a task
+   * Checks both general update permissions and special cases (e.g., work tasks)
+   */
+  private validateTaskUpdatePermissions(
+    authUser: AuthUser,
+    task: Task,
+    dto: UpdateTask
+  ): void {
+    // Check basic update permission
+    if (!this.canUserAccessTask(authUser, task, 'update:task:own,any')) {
+      this.logger.warn(
+        `User ${authUser.id} attempted to update task ${task.id} without permission`
+      );
+      throw new ForbiddenException(
+        'You do not have permission to update this task'
+      );
+    }
+
+    // Special validation: check if user has permission to update work tasks
+    if (task.type === 'work' && (dto.content || dto.priority || dto.title)) {
+      const hasWorkTaskPermission = checkPermissionByString(
+        authUser.role,
+        'update:task:any'
+      );
+
+      if (!hasWorkTaskPermission) {
+        this.logger.warn(
+          `User ${authUser.id} (${authUser.role.name}) attempted to change task to work type`
+        );
+        throw new ForbiddenException(
+          'Only administrators and owners can update work tasks'
+        );
+      }
+    }
+  }
+
+  /**
+   * Centralized audit logging for task operations
+   * @param action - The action being performed
+   * @param authUser - The authenticated user
+   * @param taskId - The task ID
+   * @param outcome - Success or failure
+   * @param metadata - Additional metadata to log
+   */
+  private async logTaskOperation(
+    action: 'update' | 'delete' | 'create',
+    authUser: AuthUser,
+    taskId: string,
+    outcome: 'success' | 'failure',
+    metadata?: any
+  ): Promise<void> {
+    const auditLogData: CreateAuditLogData = {
+      action,
+      resourceType: 'task',
+      organizationId: authUser.organization.id,
+      route: `/tasks/${taskId}`,
+      metadata: metadata || {},
+      actorUserId: authUser.id,
+      actorEmail: authUser.email,
+      outcome,
+      resourceId: taskId,
+    };
+
+    await this.auditLogsService.createAuditLog(auditLogData);
   }
 }
