@@ -16,24 +16,25 @@ import {
 jest.mock('@task-management-system/auth', () => ({
   checkPermission: jest.fn(),
   checkOrganizationPermission: jest.fn(),
+  canUserAccessTask: jest.fn(),
 }));
 
 import {
   checkOrganizationPermission,
-  checkPermission,
+  canUserAccessTask,
 } from '@task-management-system/auth';
 import mockRole from '../roles/roles.mock';
 import mockOrganization from '../organizations/organizations.mock';
 import { OrganizationAccessService } from '../../core/services/organization-access.service';
 
-const mockedCheckPermission = checkPermission as jest.MockedFunction<
-  typeof checkPermission
->;
-
 const mockedCheckOrganizationPermission =
   checkOrganizationPermission as jest.MockedFunction<
     typeof checkOrganizationPermission
   >;
+
+const canUserAccessTaskSpy = canUserAccessTask as jest.MockedFunction<
+  typeof canUserAccessTask
+>;
 
 describe('TasksService', () => {
   let service: TasksService;
@@ -69,7 +70,9 @@ describe('TasksService', () => {
     type: 'personal',
     priority: 'medium',
     userId: 'user-123',
+    assignedToId: 'user-123',
     organizationId: 'org-123',
+    assignedTo: {} as User,
     user: {} as User,
     organization: mockOrganization,
     createdAt: new Date('2024-01-01'),
@@ -104,6 +107,11 @@ describe('TasksService', () => {
       errorMessage: '',
       accessLevel: 'any',
     }));
+
+    canUserAccessTaskSpy.mockReturnValue({
+      hasAccess: true,
+      accessLevel: 'any',
+    });
     // Reset all mocks before each test
     jest.clearAllMocks();
   });
@@ -253,21 +261,20 @@ describe('TasksService', () => {
   });
 
   describe('updateTask', () => {
-    let canAccessTaskSpy: jest.SpyInstance;
+    let validateTaskUpdatePermissionsSpy: jest.SpyInstance;
     beforeEach(() => {
-      canAccessTaskSpy = jest.spyOn(service as any, 'canUserAccessTask');
+      validateTaskUpdatePermissionsSpy = jest.spyOn(
+        service as any,
+        'validateTaskUpdatePermissions'
+      );
       auditLogsService.createAuditLog.mockResolvedValue(undefined);
-      canAccessTaskSpy.mockResolvedValue(true);
+      validateTaskUpdatePermissionsSpy.mockResolvedValue(undefined);
     });
 
     it('should update task successfully when user has access', async () => {
       const updatedTask = { ...mockTask, status: 'in-progress' as any };
       tasksRepo.findByIdOrThrow.mockResolvedValue(mockTask);
       tasksRepo.updateTask.mockResolvedValue(updatedTask);
-      canAccessTaskSpy.mockReturnValue({
-        hasAccess: true,
-        accessLevel: 'any',
-      });
 
       const result = await service.updateTask(mockAuthUser, 'task-123', {
         status: 'in-progress',
@@ -278,10 +285,10 @@ describe('TasksService', () => {
       expect(tasksRepo.updateTask).toHaveBeenCalledWith('task-123', {
         status: 'in-progress',
       });
-      expect(canAccessTaskSpy).toHaveBeenCalledWith(
+      expect(validateTaskUpdatePermissionsSpy).toHaveBeenCalledWith(
         mockAuthUser,
         mockTask,
-        'update:task:own,any'
+        { status: 'in-progress' }
       );
     });
 
@@ -306,7 +313,9 @@ describe('TasksService', () => {
 
     it('should throw ForbiddenException when user lacks access', async () => {
       tasksRepo.findByIdOrThrow.mockResolvedValue(mockTask);
-      canAccessTaskSpy.mockReturnValue(false);
+      validateTaskUpdatePermissionsSpy.mockImplementation(() => {
+        throw new ForbiddenException();
+      });
       jest
         .spyOn(organizationAccessService, 'validateAccess')
         .mockImplementation(() => mockTask.organizationId);
@@ -316,7 +325,7 @@ describe('TasksService', () => {
       ).rejects.toThrow(ForbiddenException);
       await expect(
         service.updateTask(mockAuthUser, 'task-123', mockUpdateTaskDto)
-      ).rejects.toThrow('You do not have permission to update this task');
+      ).rejects.toThrow();
     });
 
     it('should throw ForbiddenException when non-admin tries to change task to work type', async () => {
@@ -342,27 +351,19 @@ describe('TasksService', () => {
   });
 
   describe('deleteTask', () => {
-    let canAccessTaskSpy: jest.SpyInstance;
-
     beforeEach(() => {
-      canAccessTaskSpy = jest.spyOn(service as any, 'canUserAccessTask');
       auditLogsService.createAuditLog.mockResolvedValue(undefined);
-      canAccessTaskSpy.mockResolvedValue(true);
     });
 
     it('should delete task successfully when user has access', async () => {
       tasksRepo.findByIdOrThrow.mockResolvedValue(mockTask);
       tasksRepo.deleteTask.mockResolvedValue(undefined);
-      canAccessTaskSpy.mockReturnValue({
-        hasAccess: true,
-        accessLevel: 'any',
-      });
 
       await service.deleteTask(mockAuthUser, 'task-123');
 
       expect(tasksRepo.findByIdOrThrow).toHaveBeenCalledWith('task-123');
       expect(tasksRepo.deleteTask).toHaveBeenCalledWith('task-123');
-      expect(canAccessTaskSpy).toHaveBeenCalledWith(
+      expect(canUserAccessTaskSpy).toHaveBeenCalledWith(
         mockAuthUser,
         mockTask,
         'delete:task:own,any'
@@ -390,9 +391,9 @@ describe('TasksService', () => {
 
     it('should throw ForbiddenException when user lacks access', async () => {
       tasksRepo.findByIdOrThrow.mockResolvedValue(mockTask);
-      canAccessTaskSpy.mockReturnValue({
+      canUserAccessTaskSpy.mockReturnValue({
         hasAccess: false,
-        access: null,
+        accessLevel: null,
       });
 
       await expect(

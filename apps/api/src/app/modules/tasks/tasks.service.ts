@@ -6,10 +6,8 @@ import { CreateAuditLogData } from '../audit-logs/audit-log.types';
 import { CreateTask, UpdateTask } from '@task-management-system/data';
 import { User as AuthUser } from '@task-management-system/data';
 import {
-  checkPermission,
+  canUserAccessTask,
   checkPermissionByString,
-  parsePermissionString,
-  PermissionString,
 } from '@task-management-system/auth';
 import { OrganizationAccessService } from '../../core/services/organization-access.service';
 
@@ -141,7 +139,7 @@ export class TasksService {
       );
 
       // Validate task specific permissions
-      const { hasAccess } = this.canUserAccessTask(
+      const { hasAccess } = canUserAccessTask(
         authUser,
         task,
         'delete:task:own,any'
@@ -165,66 +163,6 @@ export class TasksService {
       });
       throw error;
     }
-  }
-
-  /**
-   * Checks if the user can access the task based on ownership and permissions.
-   * Note: Organization access should be validated separately using OrganizationAccessService
-   *
-   * @param user - The authenticated user
-   * @param task - The task to check access for
-   * @param requiredPermission - The permission string required to access the task
-   * @returns Object with hasAccess boolean and the highest access level granted ('any' | 'own' | null)
-   */
-  private canUserAccessTask(
-    user: AuthUser,
-    task: Task,
-    requiredPermission: PermissionString
-  ): { hasAccess: boolean; accessLevel: 'any' | 'own' | null } {
-    if (!user || !user.role) {
-      return { hasAccess: false, accessLevel: null };
-    }
-
-    const { access, entity, action } =
-      parsePermissionString(requiredPermission);
-
-    // If no access scope is specified, just check if user has the permission
-    if (!access || access.length === 0) {
-      const hasPermission = checkPermissionByString(
-        user.role,
-        requiredPermission
-      );
-      return { hasAccess: hasPermission, accessLevel: null };
-    }
-
-    // Check "any" scope first (higher privilege)
-    if (access.includes('any')) {
-      const hasAnyPermission = checkPermission(
-        user.role,
-        entity,
-        action,
-        'any'
-      );
-      if (hasAnyPermission) {
-        return { hasAccess: true, accessLevel: 'any' };
-      }
-    }
-
-    // Check "own" scope - user owns or is assigned to the task AND has the "own" permission
-    const canAccess = task.assignedToId === user.id || task.userId === user.id;
-    if (access.includes('own') && canAccess) {
-      const hasOwnPermission = checkPermission(
-        user.role,
-        entity,
-        action,
-        'own'
-      );
-      if (hasOwnPermission) {
-        return { hasAccess: true, accessLevel: 'own' };
-      }
-    }
-
-    return { hasAccess: false, accessLevel: null };
   }
 
   /**
@@ -264,7 +202,7 @@ export class TasksService {
     dto: UpdateTask
   ): void {
     // Check basic update permission
-    const { hasAccess, accessLevel } = this.canUserAccessTask(
+    const { hasAccess, accessLevel } = canUserAccessTask(
       authUser,
       task,
       'update:task:own,any'
