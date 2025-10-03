@@ -173,23 +173,21 @@ export class TasksService {
     authUser: AuthUser,
     dto: CreateTask
   ): void {
+    if (dto.type === 'personal') return; // Personal tasks don't require special permissions - anyone can create them
     // Work tasks require elevated permissions
-    if (dto.type === 'work') {
-      const hasWorkTaskPermission = checkPermissionByString(
-        authUser.role,
-        'create:task:any'
-      );
+    const hasWorkTaskPermission = checkPermissionByString(
+      authUser.role,
+      'create:task:any'
+    );
 
-      if (!hasWorkTaskPermission) {
-        this.logger.warn(
-          `User ${authUser.id} (${authUser.role.name}) attempted to create a work task without permission`
-        );
-        throw new ForbiddenException(
-          'Only administrators and owners can create work tasks'
-        );
-      }
+    if (!hasWorkTaskPermission) {
+      this.logger.warn(
+        `User ${authUser.id} (${authUser.role.name}) attempted to create a work task without permission`
+      );
+      throw new ForbiddenException(
+        'Only administrators and owners can create work tasks'
+      );
     }
-    // Personal tasks don't require special permissions - anyone can create them
   }
 
   /**
