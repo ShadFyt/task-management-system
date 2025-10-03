@@ -58,7 +58,12 @@ import { createTaskSchema } from '@task-management-system/data';
 
           <div>
             <label for="type" class="form-label"> Type * </label>
-            <select id="type" formControlName="type" [class]="selectClasses()">
+            <select
+              id="type"
+              formControlName="type"
+              [class]="selectClasses()"
+              [attr.readonly]="!hasAnyPermission() ? true : null"
+            >
               <option value="personal">Personal</option>
               @if (hasAnyPermission()) {
               <option value="work">Work</option>
@@ -160,9 +165,6 @@ export class TaskForm {
       const typeControl = this.taskForm.get('type');
       if (!this.hasAnyPermission()) {
         typeControl?.setValue('personal');
-        typeControl?.disable();
-      } else {
-        typeControl?.enable();
       }
     });
   }
