@@ -32,7 +32,7 @@ export const taskSchema = z.object({
   priority: TaskPriorityEnum,
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
-  assignedToId: z.string().optional(),
+  assignedToId: z.string().or(z.null()).optional(),
 });
 
 export type CreateTask = z.infer<typeof createTaskSchema>;
