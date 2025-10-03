@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Task } from './tasks.entity';
@@ -70,6 +74,14 @@ export class TasksRepo {
     });
   }
 
+  async findByIdOrThrow(id: string): Promise<Task> {
+    const task = await this.findById(id);
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+    return task;
+  }
+
   /**
    * Update a task by ID
    * @param id Task ID
@@ -79,11 +91,7 @@ export class TasksRepo {
   async updateTask(id: string, taskData: Partial<Task>): Promise<Task> {
     try {
       await this.repo.update(id, taskData);
-      const updatedTask = await this.findById(id);
-      if (!updatedTask) {
-        throw new BadRequestException('Failed to retrieve updated task');
-      }
-      return updatedTask;
+      return await this.findByIdOrThrow(id);
     } catch (error) {
       throw new BadRequestException('Failed to update task');
     }

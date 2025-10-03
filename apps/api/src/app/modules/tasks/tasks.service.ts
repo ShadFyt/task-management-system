@@ -1,9 +1,4 @@
-import {
-  ForbiddenException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { TasksRepo } from './tasks.repo';
 import { Task } from './tasks.entity';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
@@ -109,10 +104,7 @@ export class TasksService {
     dto: UpdateTask
   ): Promise<Task> {
     try {
-      const task = await this.repo.findById(taskId);
-      if (!task) {
-        throw new NotFoundException('Task not found');
-      }
+      const task = await this.repo.findByIdOrThrow(taskId);
 
       // Validate organization access
       this.organizationAccessService.validateAccess(
@@ -140,10 +132,7 @@ export class TasksService {
    */
   async deleteTask(authUser: AuthUser, taskId: string): Promise<void> {
     try {
-      const task = await this.repo.findById(taskId);
-      if (!task) {
-        throw new NotFoundException('Task not found');
-      }
+      const task = await this.repo.findByIdOrThrow(taskId);
 
       // Validate organization access
       this.organizationAccessService.validateAccess(
@@ -152,7 +141,12 @@ export class TasksService {
       );
 
       // Validate task specific permissions
-      if (!this.canUserAccessTask(authUser, task, 'delete:task:own,any')) {
+      const { hasAccess } = this.canUserAccessTask(
+        authUser,
+        task,
+        'delete:task:own,any'
+      );
+      if (!hasAccess) {
         this.logger.warn(
           `User ${authUser.id} attempted to delete task ${taskId} without permission`
         );
@@ -180,15 +174,15 @@ export class TasksService {
    * @param user - The authenticated user
    * @param task - The task to check access for
    * @param requiredPermission - The permission string required to access the task
-   * @returns true if the user has access, false otherwise
+   * @returns Object with hasAccess boolean and the highest access level granted ('any' | 'own' | null)
    */
   private canUserAccessTask(
     user: AuthUser,
     task: Task,
     requiredPermission: PermissionString
-  ): boolean {
+  ): { hasAccess: boolean; accessLevel: 'any' | 'own' | null } {
     if (!user || !user.role) {
-      return false;
+      return { hasAccess: false, accessLevel: null };
     }
 
     const { access, entity, action } =
@@ -196,24 +190,14 @@ export class TasksService {
 
     // If no access scope is specified, just check if user has the permission
     if (!access || access.length === 0) {
-      return checkPermissionByString(user.role, requiredPermission);
-    }
-
-    // Check "own" scope - user owns the task AND has the "own" permission
-    if (access.includes('own') && task.userId === user.id) {
-      const hasOwnPermission = checkPermission(
+      const hasPermission = checkPermissionByString(
         user.role,
-        entity,
-        action,
-        'own'
+        requiredPermission
       );
-      if (hasOwnPermission) {
-        return true;
-      }
+      return { hasAccess: hasPermission, accessLevel: null };
     }
 
-    // Check "any" scope - user has the "any" permission
-    // Note: Org hierarchy validation should be handled by OrganizationAccessService
+    // Check "any" scope first (higher privilege)
     if (access.includes('any')) {
       const hasAnyPermission = checkPermission(
         user.role,
@@ -222,11 +206,25 @@ export class TasksService {
         'any'
       );
       if (hasAnyPermission) {
-        return true;
+        return { hasAccess: true, accessLevel: 'any' };
       }
     }
 
-    return false;
+    // Check "own" scope - user owns or is assigned to the task AND has the "own" permission
+    const canAccess = task.assignedToId === user.id || task.userId === user.id;
+    if (access.includes('own') && canAccess) {
+      const hasOwnPermission = checkPermission(
+        user.role,
+        entity,
+        action,
+        'own'
+      );
+      if (hasOwnPermission) {
+        return { hasAccess: true, accessLevel: 'own' };
+      }
+    }
+
+    return { hasAccess: false, accessLevel: null };
   }
 
   /**
@@ -266,7 +264,13 @@ export class TasksService {
     dto: UpdateTask
   ): void {
     // Check basic update permission
-    if (!this.canUserAccessTask(authUser, task, 'update:task:own,any')) {
+    const { hasAccess, accessLevel } = this.canUserAccessTask(
+      authUser,
+      task,
+      'update:task:own,any'
+    );
+
+    if (!hasAccess) {
       this.logger.warn(
         `User ${authUser.id} attempted to update task ${task.id} without permission`
       );
@@ -275,21 +279,18 @@ export class TasksService {
       );
     }
 
-    // Special validation: check if user has permission to update work tasks
-    if (task.type === 'work' && (dto.content || dto.priority || dto.title)) {
-      const hasWorkTaskPermission = checkPermissionByString(
-        authUser.role,
-        'update:task:any'
+    // Special validation: only users with 'any' access can update work tasks
+    if (
+      task.type === 'work' &&
+      (dto.content || dto.priority || dto.title) &&
+      accessLevel !== 'any'
+    ) {
+      this.logger.warn(
+        `User ${authUser.id} (${authUser.role.name}) attempted to update work task without 'any' permission`
       );
-
-      if (!hasWorkTaskPermission) {
-        this.logger.warn(
-          `User ${authUser.id} (${authUser.role.name}) attempted to change task to work type`
-        );
-        throw new ForbiddenException(
-          'Only administrators and owners can update work tasks'
-        );
-      }
+      throw new ForbiddenException(
+        'Only administrators and owners can update work tasks'
+      );
     }
   }
 

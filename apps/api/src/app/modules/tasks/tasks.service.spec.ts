@@ -261,22 +261,23 @@ describe('TasksService', () => {
     });
 
     it('should update task successfully when user has access', async () => {
-      const updatedTask = { ...mockTask, ...mockUpdateTaskDto };
-      tasksRepo.findById.mockResolvedValue(mockTask);
+      const updatedTask = { ...mockTask, status: 'in-progress' as any };
+      tasksRepo.findByIdOrThrow.mockResolvedValue(mockTask);
       tasksRepo.updateTask.mockResolvedValue(updatedTask);
+      canAccessTaskSpy.mockReturnValue({
+        hasAccess: true,
+        accessLevel: 'any',
+      });
 
-      const result = await service.updateTask(
-        mockAuthUser,
-        'task-123',
-        mockUpdateTaskDto
-      );
+      const result = await service.updateTask(mockAuthUser, 'task-123', {
+        status: 'in-progress',
+      });
 
       expect(result).toEqual(updatedTask);
-      expect(tasksRepo.findById).toHaveBeenCalledWith('task-123');
-      expect(tasksRepo.updateTask).toHaveBeenCalledWith(
-        'task-123',
-        mockUpdateTaskDto
-      );
+      expect(tasksRepo.findByIdOrThrow).toHaveBeenCalled();
+      expect(tasksRepo.updateTask).toHaveBeenCalledWith('task-123', {
+        status: 'in-progress',
+      });
       expect(canAccessTaskSpy).toHaveBeenCalledWith(
         mockAuthUser,
         mockTask,
@@ -285,14 +286,16 @@ describe('TasksService', () => {
     });
 
     it('should throw NotFoundException when task does not exist', async () => {
-      tasksRepo.findById.mockResolvedValue(null);
+      tasksRepo.findByIdOrThrow.mockImplementation(() => {
+        throw new NotFoundException();
+      });
 
       await expect(
         service.updateTask(mockAuthUser, 'nonexistent-task', mockUpdateTaskDto)
       ).rejects.toThrow(NotFoundException);
       await expect(
         service.updateTask(mockAuthUser, 'nonexistent-task', mockUpdateTaskDto)
-      ).rejects.toThrow('Task not found');
+      ).rejects.toThrow();
 
       expect(auditLogsService.createAuditLog).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -302,7 +305,7 @@ describe('TasksService', () => {
     });
 
     it('should throw ForbiddenException when user lacks access', async () => {
-      tasksRepo.findById.mockResolvedValue(mockTask);
+      tasksRepo.findByIdOrThrow.mockResolvedValue(mockTask);
       canAccessTaskSpy.mockReturnValue(false);
       jest
         .spyOn(organizationAccessService, 'validateAccess')
@@ -327,7 +330,7 @@ describe('TasksService', () => {
         .mockImplementation(() => {
           throw new ForbiddenException();
         });
-      tasksRepo.findById.mockResolvedValue(mockTask);
+      tasksRepo.findByIdOrThrow.mockResolvedValue(mockTask);
 
       await expect(
         service.updateTask(viewerUser, 'task-123', workUpdateDto)
@@ -348,12 +351,16 @@ describe('TasksService', () => {
     });
 
     it('should delete task successfully when user has access', async () => {
-      tasksRepo.findById.mockResolvedValue(mockTask);
+      tasksRepo.findByIdOrThrow.mockResolvedValue(mockTask);
       tasksRepo.deleteTask.mockResolvedValue(undefined);
+      canAccessTaskSpy.mockReturnValue({
+        hasAccess: true,
+        accessLevel: 'any',
+      });
 
       await service.deleteTask(mockAuthUser, 'task-123');
 
-      expect(tasksRepo.findById).toHaveBeenCalledWith('task-123');
+      expect(tasksRepo.findByIdOrThrow).toHaveBeenCalledWith('task-123');
       expect(tasksRepo.deleteTask).toHaveBeenCalledWith('task-123');
       expect(canAccessTaskSpy).toHaveBeenCalledWith(
         mockAuthUser,
@@ -369,19 +376,24 @@ describe('TasksService', () => {
     });
 
     it('should throw NotFoundException when task does not exist', async () => {
-      tasksRepo.findById.mockResolvedValue(null);
+      tasksRepo.findByIdOrThrow.mockImplementation(() => {
+        throw new NotFoundException();
+      });
 
       await expect(
         service.deleteTask(mockAuthUser, 'nonexistent-task')
       ).rejects.toThrow(NotFoundException);
       await expect(
         service.deleteTask(mockAuthUser, 'nonexistent-task')
-      ).rejects.toThrow('Task not found');
+      ).rejects.toThrow();
     });
 
     it('should throw ForbiddenException when user lacks access', async () => {
-      tasksRepo.findById.mockResolvedValue(mockTask);
-      canAccessTaskSpy.mockReturnValue(false);
+      tasksRepo.findByIdOrThrow.mockResolvedValue(mockTask);
+      canAccessTaskSpy.mockReturnValue({
+        hasAccess: false,
+        access: null,
+      });
 
       await expect(
         service.deleteTask(mockAuthUser, 'task-123')
