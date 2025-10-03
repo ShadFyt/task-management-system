@@ -48,6 +48,9 @@ export class User {
   @OneToMany(() => Task, (task) => task.user)
   tasks: Task[];
 
+  @OneToMany(() => Task, (task) => task.assignedTo)
+  assignedTasks: Task[];
+
   @Column({ default: true })
   isActive: boolean;
 
