@@ -2,18 +2,17 @@ import { Controller, Get, Query, UseGuards, Request } from '@nestjs/common';
 import { AuditLogsService } from './audit-logs.service';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/rbac.decorators';
-import { ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import {
   GetAuditLogsResponse,
   limitQuerySchema,
   offsetQuerySchema,
-  orgIdQuerySchema,
   User,
   getAuditLogsResponseSchema,
 } from '@task-management-system/data';
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto, ZodResponse } from 'nestjs-zod';
+import { OrgIdQueryDto } from '../../common/dtos';
 
-class orgIdQueryDto extends createZodDto(orgIdQuerySchema) {}
 class limitQueryDto extends createZodDto(limitQuerySchema) {}
 class offsetQueryDto extends createZodDto(offsetQuerySchema) {}
 class GetAuditLogsResponseDto extends createZodDto(
@@ -36,14 +35,14 @@ export class AuditLogsController {
   @Get()
   @RequirePermission('read:audit-log')
   @ApiBearerAuth('JWT-auth')
-  @ApiResponse({
+  @ZodResponse({
     status: 200,
-    description: 'List of tasks',
+    description: 'List of audit logs',
     type: GetAuditLogsResponseDto,
   })
   async getAuditLogs(
     @Request() req: { user: User },
-    @Query() orgId: orgIdQueryDto,
+    @Query() orgId: OrgIdQueryDto,
     @Query() limit: limitQueryDto,
     @Query() offset: offsetQueryDto
   ): Promise<GetAuditLogsResponse> {

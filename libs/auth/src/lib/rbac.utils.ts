@@ -3,7 +3,8 @@ import {
   PermissionAccess,
   PermissionAction,
   PermissionEntity,
-  Role,
+  RoleDto,
+  Task,
   User as AuthUser,
 } from '@task-management-system/data';
 
@@ -25,11 +26,13 @@ import {
  *          - `access` (PermissionAccess[]): (Optional) An array of access levels parsed from the string.
  */
 export const parsePermissionString = (p: PermissionString) => {
+  // Split input string by ':' into up to 3 parts: action, entity, and access list
   const [action, entity, accessPart] = p.split(':') as [
     PermissionAction,
     PermissionEntity,
     PermissionAccess?
   ];
+  // If access part exists, split by ',' and filter out empty entries
   const access = accessPart
     ? (accessPart.split(',').filter(Boolean) as PermissionAccess[])
     : undefined;
@@ -46,7 +49,7 @@ export const parsePermissionString = (p: PermissionString) => {
  * @returns Returns true if the role has the required permission; otherwise, returns false.
  */
 export const checkPermission = (
-  role: Role,
+  role: RoleDto,
   entity: PermissionEntity,
   action: PermissionAction,
   access: PermissionAccess
@@ -55,15 +58,18 @@ export const checkPermission = (
     console.error('No permissions found for role:', role);
     return false;
   }
+  const normalizedAccess = access.trim().toLowerCase() as PermissionAccess;
+
   return role.permissions.some((permission) => {
     const userAccess = permission.access
       .split(',')
+      .map((a) => a.trim().toLowerCase())
       .filter(Boolean) as PermissionAccess[];
 
     return (
       permission.entity === entity &&
       permission.action === action &&
-      userAccess.includes(access)
+      userAccess.includes(normalizedAccess)
     );
   });
 };
@@ -76,7 +82,7 @@ export const checkPermission = (
  * @returns Returns `true` if the role has the required permission, otherwise `false`.
  */
 export const checkPermissionByString = (
-  role: Role,
+  role: RoleDto,
   permissionString: PermissionString
 ) => {
   const { action, entity, access } = parsePermissionString(permissionString);
@@ -90,15 +96,15 @@ export const checkPermissionByString = (
       if (!access || access.length === 0) return true;
 
       // Normalize role’s granted access
-      const granted = Array.isArray((permission as any).access)
-        ? ((permission as any).access as PermissionAccess[])
-        : (String(permission.access)
-            .split(',')
-            .map((a) => a.trim())
-            .filter(Boolean) as PermissionAccess[]);
+      const granted = new Set(
+        String(permission.access)
+          .split(',')
+          .map((a) => a.trim().toLowerCase())
+          .filter(Boolean)
+      );
 
       // Pass if any requested access is included in the granted set
-      return access.some((a) => granted.includes(a));
+      return access.some((a) => granted.has(a));
     }) ?? false
   );
 };
@@ -115,16 +121,12 @@ interface PermissionCheckResult {
  *
  * @param authUser - The authenticated user requesting access.
  * @param targetOrgId - The ID of the organization being targeted.
- * @param entity - The entity for which the permission is being checked.
- * @param action - The desired action that the user wants to perform.
  * @return An object indicating whether the user has access, and
  * potentially including reasons and error messages if access is denied.
  */
 export const checkOrganizationPermission = (
   authUser: AuthUser,
-  targetOrgId: string,
-  entity: PermissionEntity,
-  action: PermissionAction
+  targetOrgId: string
 ): PermissionCheckResult => {
   const { organization, subOrganizations } = authUser;
 
@@ -146,12 +148,17 @@ export const checkOrganizationPermission = (
   }
 
   // Check permissions for sub organization access
-  const hasPermission = checkPermission(authUser.role, entity, action, 'any');
+  const hasPermission = checkPermission(
+    authUser.role,
+    'organization',
+    'read',
+    'any'
+  );
   if (!hasPermission) {
     return {
       hasAccess: false,
       reason: 'insufficient_sub_org_permissions',
-      errorMessage: `Insufficient permissions to ${action} in sub-organization`,
+      errorMessage: `Insufficient permissions`,
     };
   }
 
@@ -159,4 +166,53 @@ export const checkOrganizationPermission = (
     hasAccess: true,
     errorMessage: '',
   };
+};
+
+/**
+ * Checks if the user can access the task based on ownership and permissions.
+ * Note: Organization access should be validated separately using OrganizationAccessService
+ *
+ * @param user - The authenticated user
+ * @param task - The task to check access for
+ * @param requiredPermission - The permission string required to access the task
+ * @returns Object with hasAccess boolean and the highest access level granted ('any' | 'own' | null)
+ */
+export const canUserAccessTask = (
+  user: AuthUser,
+  task: Task,
+  requiredPermission: PermissionString
+): { hasAccess: boolean; accessLevel: 'any' | 'own' | null } => {
+  if (!user || !user.role) {
+    return { hasAccess: false, accessLevel: null };
+  }
+
+  const { access, entity, action } = parsePermissionString(requiredPermission);
+
+  // If no access scope is specified, just check if user has the permission
+  if (!access || access.length === 0) {
+    const hasPermission = checkPermissionByString(
+      user.role,
+      requiredPermission
+    );
+    return { hasAccess: hasPermission, accessLevel: null };
+  }
+
+  // Check "any" scope first (higher privilege)
+  if (access.includes('any')) {
+    const hasAnyPermission = checkPermission(user.role, entity, action, 'any');
+    if (hasAnyPermission) {
+      return { hasAccess: true, accessLevel: 'any' };
+    }
+  }
+
+  // Check "own" scope - user owns or is assigned to the task AND has the "own" permission
+  const canAccess = task.assignedToId === user.id || task.userId === user.id;
+  if (access.includes('own') && canAccess) {
+    const hasOwnPermission = checkPermission(user.role, entity, action, 'own');
+    if (hasOwnPermission) {
+      return { hasAccess: true, accessLevel: 'own' };
+    }
+  }
+
+  return { hasAccess: false, accessLevel: null };
 };

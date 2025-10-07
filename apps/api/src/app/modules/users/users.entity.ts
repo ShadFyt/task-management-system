@@ -7,6 +7,7 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Role } from '../roles/roles.entity';
 import { Organization } from '../organizations/organizations.entity';
@@ -30,6 +31,7 @@ export class User {
   @ManyToOne(() => Role, (role) => role.users)
   role: Role;
 
+  @Index()
   @Column('uuid')
   organizationId: string;
 
@@ -45,6 +47,9 @@ export class User {
 
   @OneToMany(() => Task, (task) => task.user)
   tasks: Task[];
+
+  @OneToMany(() => Task, (task) => task.assignedTo)
+  assignedTasks: Task[];
 
   @Column({ default: true })
   isActive: boolean;

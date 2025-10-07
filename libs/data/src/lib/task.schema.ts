@@ -14,9 +14,12 @@ export const createTaskSchema = z.object({
   priority: TaskPriorityEnum,
 });
 
-export const updateTaskSchema = createTaskSchema.partial().extend({
-  status: TaskStatusEnum.optional(),
-});
+export const updateTaskSchema = createTaskSchema
+  .partial()
+  .extend({
+    status: TaskStatusEnum.optional(),
+  })
+  .omit({ type: true });
 
 export const taskSchema = z.object({
   id: z.string(),
@@ -29,6 +32,7 @@ export const taskSchema = z.object({
   priority: TaskPriorityEnum,
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
+  assignedToId: z.string().or(z.null()).optional(),
 });
 
 export type CreateTask = z.infer<typeof createTaskSchema>;

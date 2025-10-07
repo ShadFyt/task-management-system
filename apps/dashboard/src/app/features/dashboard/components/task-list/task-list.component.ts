@@ -125,40 +125,28 @@ export class TaskList {
   private authService = inject(AuthService);
 
   status = input<'todo' | 'in-progress' | 'done'>('todo');
+  tasks = input.required<Task[]>();
+  deleting = signal<string | null>(null);
   currentFilter = this.store.selectSignal(selectCurrentFilter);
 
   filteredTasks = computed(() => {
-    let tasks = this.taskService
-      .tasks()
-      .filter((task) => task.status === this.status());
-
     const filter = this.currentFilter();
     if (filter !== 'all') {
-      tasks = tasks.filter((task) => task.type === filter);
+      return this.tasks().filter((task) => task.type === filter);
     }
 
-    return tasks;
+    return this.tasks();
   });
 
   canDeleteTask = (task: Task): boolean => {
     const user = this.authService.user();
     if (!user?.role) return false;
 
-    // If it's a work task, need delete:task:any permission
-    if (task.type === 'work') {
-      return checkPermission(user.role, 'task', 'delete', 'any');
-    }
+    const isOwnTask = task.userId === user.id;
+    const hasDeleteAny = checkPermission(user.role, 'task', 'delete', 'any');
 
-    if (task.type === 'personal') {
-      // Can always delete own personal tasks
-      if (task.userId === user.id) return true; // you should only be able to see your own personal tasks so this is redundant but it's good to have
-      return checkPermission(user.role, 'task', 'delete', 'any'); // I dont think this should be allowed will change if time permits
-    }
-
-    return false;
+    return (task.type === 'personal' && isOwnTask) || hasDeleteAny;
   };
-
-  deleting = signal<string | null>(null);
 
   async changeStatus(task: Task, newStatus: 'todo' | 'in-progress' | 'done') {
     try {

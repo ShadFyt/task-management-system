@@ -57,4 +57,14 @@ export class Task {
   @ManyToOne(() => User, (user) => user.tasks, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
+
+  @Column('uuid', { nullable: true })
+  assignedToId: string;
+
+  @ManyToOne(() => User, (user) => user.assignedTasks, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'assignedToId' })
+  assignedTo: User;
 }

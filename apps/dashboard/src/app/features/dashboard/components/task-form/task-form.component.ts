@@ -62,7 +62,7 @@ import { createTaskSchema } from '@task-management-system/data';
               id="type"
               formControlName="type"
               [class]="selectClasses()"
-              [disabled]="!hasAnyPermission()"
+              [attr.readonly]="!hasAnyPermission() ? true : null"
             >
               <option value="personal">Personal</option>
               @if (hasAnyPermission()) {
@@ -152,7 +152,7 @@ export class TaskForm {
       ],
       content: ['', [zodValidator(createTaskSchema.shape.content)]],
       type: [
-        'personal',
+        'work',
         [Validators.required, zodValidator(createTaskSchema.shape.type)],
       ],
       priority: [
@@ -162,8 +162,9 @@ export class TaskForm {
     });
 
     effect(() => {
+      const typeControl = this.taskForm.get('type');
       if (!this.hasAnyPermission()) {
-        this.taskForm.patchValue({ type: 'personal' });
+        typeControl?.setValue('personal');
       }
     });
   }
@@ -174,8 +175,6 @@ export class TaskForm {
       return;
     }
     this._loading.set(true);
-    this._error.set(null);
-
     try {
       const formValue = this.taskForm.value;
       const taskData = {
@@ -183,10 +182,7 @@ export class TaskForm {
         dueDate: formValue.dueDate || undefined,
       };
       await this.taskService.createTask(taskData);
-      this.taskForm.reset({
-        type: 'personal',
-        priority: 'medium',
-      });
+      this.resetForm();
       this.taskCreated.emit();
     } catch (err: any) {
       this.handleError(err);
@@ -196,11 +192,7 @@ export class TaskForm {
   }
 
   onCancel(): void {
-    this.taskForm.reset({
-      type: 'personal',
-      priority: 'medium',
-    });
-    this._error.set(null);
+    this.resetForm();
     this.cancelled.emit();
   }
 
@@ -213,5 +205,13 @@ export class TaskForm {
     }
 
     this._error.set(errorMessage);
+  }
+
+  private resetForm(): void {
+    this.taskForm.reset({
+      type: 'personal',
+      priority: 'medium',
+    });
+    this._error.set(null);
   }
 }

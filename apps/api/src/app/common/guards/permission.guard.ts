@@ -9,10 +9,16 @@ import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { PermissionString } from '@task-management-system/auth';
 import { REQ_PERMISSION, REQ_ROLE } from '../decorators/rbac.decorators';
-import { checkPermissionByString } from '@task-management-system/auth';
+import {
+  checkPermissionByString,
+  parsePermissionString,
+} from '@task-management-system/auth';
 import { AuditLogsService } from '../../modules/audit-logs/audit-logs.service';
 import { CreateAuditLogData } from '../../modules/audit-logs/audit-log.types';
-import { User as AuthUser } from '@task-management-system/data';
+import {
+  PermissionEntity,
+  User as AuthUser,
+} from '@task-management-system/data';
 
 type GuardRequest = Request & { user?: AuthUser };
 
@@ -46,6 +52,9 @@ export class PermissionGuard implements CanActivate {
     if (!permission && !role) {
       return true;
     }
+    const entity = permission
+      ? parsePermissionString(permission).entity
+      : undefined;
 
     // Role check first if present
     if (role) {
@@ -58,6 +67,7 @@ export class PermissionGuard implements CanActivate {
             requiredRole: role,
             requestMethod: request.method,
           },
+          resourceType: entity,
         });
         throw new ForbiddenException(`Required role: ${role}`);
       }
@@ -74,6 +84,7 @@ export class PermissionGuard implements CanActivate {
             requiredPermission: permission,
             requestMethod: request.method,
           },
+          resourceType: entity,
         });
         throw new ForbiddenException(`Required permission: ${permission}`);
       }
@@ -95,12 +106,20 @@ export class PermissionGuard implements CanActivate {
     return 'unknown';
   }
 
+  /**
+   * Logs an access denial event for a user, capturing detailed information about the action.
+   *
+   * @param user - The authenticated user attempting the action.
+   * @param params - Parameters providing details about the denied access.
+   * @return A promise that resolves when the audit log has been successfully created.
+   */
   private async logDeniedAccess(
     user: AuthUser,
     params: {
       metadata?: Record<string, unknown>;
       reason: string;
       resourceId?: string;
+      resourceType: PermissionEntity;
       route: string;
     }
   ): Promise<void> {
@@ -108,6 +127,7 @@ export class PermissionGuard implements CanActivate {
       action: 'organization_access_denied',
       resourceId: '',
       outcome: 'failure',
+      resourceType: params.resourceType,
       organizationId: user.organization?.id ?? 'unknown',
       route: params.route,
       metadata: {
@@ -119,6 +139,6 @@ export class PermissionGuard implements CanActivate {
       actorEmail: user.email,
     };
 
-    await this.auditLogsService.createAuditLog(auditLog);
+    this.auditLogsService.createAuditLog(auditLog);
   }
 }

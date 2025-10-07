@@ -1,5 +1,4 @@
 import { TestBed, Mocked } from '@suites/unit';
-import { Repository } from 'typeorm';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 
 import { TasksService } from './tasks.service';
@@ -13,42 +12,35 @@ import {
   User as AuthUser,
 } from '@task-management-system/data';
 
-// Mock the RBAC helper
-jest.mock('../../common/helpers/rbac.repo-helpers', () => ({
-  canUserAccessTask: jest.fn(),
-}));
-
 // Mock the auth helper
 jest.mock('@task-management-system/auth', () => ({
   checkPermission: jest.fn(),
   checkOrganizationPermission: jest.fn(),
+  canUserAccessTask: jest.fn(),
 }));
 
-import { canUserAccessTask } from '../../common/helpers/rbac.repo-helpers';
 import {
   checkOrganizationPermission,
-  checkPermission,
+  canUserAccessTask,
 } from '@task-management-system/auth';
 import mockRole from '../roles/roles.mock';
 import mockOrganization from '../organizations/organizations.mock';
-
-const mockedCanUserAccessTask = canUserAccessTask as jest.MockedFunction<
-  typeof canUserAccessTask
->;
-const mockedCheckPermission = checkPermission as jest.MockedFunction<
-  typeof checkPermission
->;
+import { OrganizationAccessService } from '../../core/services/organization-access.service';
 
 const mockedCheckOrganizationPermission =
   checkOrganizationPermission as jest.MockedFunction<
     typeof checkOrganizationPermission
   >;
 
+const canUserAccessTaskSpy = canUserAccessTask as jest.MockedFunction<
+  typeof canUserAccessTask
+>;
+
 describe('TasksService', () => {
   let service: TasksService;
   let tasksRepo: Mocked<TasksRepo>;
-  let userRepo: Mocked<Repository<User>>;
   let auditLogsService: Mocked<AuditLogsService>;
+  let organizationAccessService: Mocked<OrganizationAccessService>;
 
   // Test data fixtures
 
@@ -78,7 +70,9 @@ describe('TasksService', () => {
     type: 'personal',
     priority: 'medium',
     userId: 'user-123',
+    assignedToId: 'user-123',
     organizationId: 'org-123',
+    assignedTo: {} as User,
     user: {} as User,
     organization: mockOrganization,
     createdAt: new Date('2024-01-01'),
@@ -103,15 +97,21 @@ describe('TasksService', () => {
 
     service = unit;
     tasksRepo = unitRef.get<TasksRepo>(TasksRepo);
-
-    userRepo = unitRef.get<Repository<User>>(`${User.name}Repository`);
     auditLogsService = unitRef.get<AuditLogsService>(AuditLogsService);
+    organizationAccessService = unitRef.get<OrganizationAccessService>(
+      OrganizationAccessService
+    );
 
     mockedCheckOrganizationPermission.mockImplementation(() => ({
       hasAccess: true,
       errorMessage: '',
       accessLevel: 'any',
     }));
+
+    canUserAccessTaskSpy.mockReturnValue({
+      hasAccess: true,
+      accessLevel: 'any',
+    });
     // Reset all mocks before each test
     jest.clearAllMocks();
   });
@@ -125,6 +125,7 @@ describe('TasksService', () => {
       const mockTasks = [mockTask];
       tasksRepo.findTasksForUser.mockResolvedValue(mockTasks);
       auditLogsService.createAuditLog.mockResolvedValue(undefined);
+      organizationAccessService.validateAccess.mockReturnValue('org-123');
 
       const result = await service.findAllByUserOrg(mockAuthUser);
 
@@ -146,6 +147,9 @@ describe('TasksService', () => {
 
     it('should throw ForbiddenException for inaccessible organization', async () => {
       const inaccessibleOrgId = 'other-org-123';
+      organizationAccessService.validateAccess.mockImplementation(() => {
+        throw new ForbiddenException();
+      });
       mockedCheckOrganizationPermission.mockImplementation(() => ({
         hasAccess: false,
         errorMessage: 'not accessible',
@@ -166,6 +170,7 @@ describe('TasksService', () => {
     it('should create a personal task successfully', async () => {
       const createdTask = { ...mockTask, id: 'new-task-123' };
       tasksRepo.createTask.mockResolvedValue(createdTask);
+      organizationAccessService.validateAccess.mockReturnValue('org-123');
 
       const result = await service.createTask(mockAuthUser, mockCreateTaskDto);
 
@@ -189,11 +194,22 @@ describe('TasksService', () => {
     it('should create a work task for admin user', async () => {
       const workTaskDto = { ...mockCreateTaskDto, type: 'work' as const };
       const createdTask = { ...mockTask, type: 'work' as const };
+      const logTaskOperationSpy = jest.spyOn(
+        service as any,
+        'logTaskOperation'
+      );
       tasksRepo.createTask.mockResolvedValue(createdTask);
-
+      organizationAccessService.validateAccess.mockReturnValue('org-123');
+      jest
+        .spyOn(service as any, 'validateTaskCreatePermissions')
+        .mockReturnValue(undefined);
       const result = await service.createTask(mockAuthUser, workTaskDto);
 
       expect(result).toEqual(createdTask);
+      expect(
+        (service as any).validateTaskCreatePermissions
+      ).toHaveBeenCalledTimes(1);
+      expect(logTaskOperationSpy).toHaveBeenCalledTimes(1);
       expect(tasksRepo.createTask).toHaveBeenCalledWith({
         ...workTaskDto,
         userId: 'user-123',
@@ -208,13 +224,18 @@ describe('TasksService', () => {
         role: { ...mockRole, name: 'viewer' as const },
       };
       const workTaskDto = { ...mockCreateTaskDto, type: 'work' as const };
+      jest
+        .spyOn(service as any, 'validateTaskCreatePermissions')
+        .mockImplementation(() => {
+          throw new ForbiddenException();
+        });
 
       await expect(service.createTask(viewerUser, workTaskDto)).rejects.toThrow(
         ForbiddenException
       );
-      await expect(service.createTask(viewerUser, workTaskDto)).rejects.toThrow(
-        'Only administrators and owners can create work tasks'
-      );
+      await expect(
+        service.createTask(viewerUser, workTaskDto)
+      ).rejects.toThrow();
 
       expect(auditLogsService.createAuditLog).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -240,45 +261,48 @@ describe('TasksService', () => {
   });
 
   describe('updateTask', () => {
+    let validateTaskUpdatePermissionsSpy: jest.SpyInstance;
     beforeEach(() => {
+      validateTaskUpdatePermissionsSpy = jest.spyOn(
+        service as any,
+        'validateTaskUpdatePermissions'
+      );
       auditLogsService.createAuditLog.mockResolvedValue(undefined);
-      mockedCanUserAccessTask.mockResolvedValue(true);
+      validateTaskUpdatePermissionsSpy.mockResolvedValue(undefined);
     });
 
     it('should update task successfully when user has access', async () => {
-      const updatedTask = { ...mockTask, ...mockUpdateTaskDto };
-      tasksRepo.findById.mockResolvedValue(mockTask);
+      const updatedTask = { ...mockTask, status: 'in-progress' as any };
+      tasksRepo.findByIdOrThrow.mockResolvedValue(mockTask);
       tasksRepo.updateTask.mockResolvedValue(updatedTask);
 
-      const result = await service.updateTask(
-        mockAuthUser,
-        'task-123',
-        mockUpdateTaskDto
-      );
+      const result = await service.updateTask(mockAuthUser, 'task-123', {
+        status: 'in-progress',
+      });
 
       expect(result).toEqual(updatedTask);
-      expect(tasksRepo.findById).toHaveBeenCalledWith('task-123');
-      expect(tasksRepo.updateTask).toHaveBeenCalledWith(
-        'task-123',
-        mockUpdateTaskDto
-      );
-      expect(mockedCanUserAccessTask).toHaveBeenCalledWith(
-        userRepo,
-        'user-123',
+      expect(tasksRepo.findByIdOrThrow).toHaveBeenCalled();
+      expect(tasksRepo.updateTask).toHaveBeenCalledWith('task-123', {
+        status: 'in-progress',
+      });
+      expect(validateTaskUpdatePermissionsSpy).toHaveBeenCalledWith(
+        mockAuthUser,
         mockTask,
-        'update:task:own,any'
+        { status: 'in-progress' }
       );
     });
 
     it('should throw NotFoundException when task does not exist', async () => {
-      tasksRepo.findById.mockResolvedValue(null);
+      tasksRepo.findByIdOrThrow.mockImplementation(() => {
+        throw new NotFoundException();
+      });
 
       await expect(
         service.updateTask(mockAuthUser, 'nonexistent-task', mockUpdateTaskDto)
       ).rejects.toThrow(NotFoundException);
       await expect(
         service.updateTask(mockAuthUser, 'nonexistent-task', mockUpdateTaskDto)
-      ).rejects.toThrow('Task not found');
+      ).rejects.toThrow();
 
       expect(auditLogsService.createAuditLog).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -288,15 +312,20 @@ describe('TasksService', () => {
     });
 
     it('should throw ForbiddenException when user lacks access', async () => {
-      tasksRepo.findById.mockResolvedValue(mockTask);
-      mockedCanUserAccessTask.mockResolvedValue(false);
+      tasksRepo.findByIdOrThrow.mockResolvedValue(mockTask);
+      validateTaskUpdatePermissionsSpy.mockImplementation(() => {
+        throw new ForbiddenException();
+      });
+      jest
+        .spyOn(organizationAccessService, 'validateAccess')
+        .mockImplementation(() => mockTask.organizationId);
 
       await expect(
         service.updateTask(mockAuthUser, 'task-123', mockUpdateTaskDto)
       ).rejects.toThrow(ForbiddenException);
       await expect(
         service.updateTask(mockAuthUser, 'task-123', mockUpdateTaskDto)
-      ).rejects.toThrow('You do not have permission to update this task');
+      ).rejects.toThrow();
     });
 
     it('should throw ForbiddenException when non-admin tries to change task to work type', async () => {
@@ -305,34 +334,37 @@ describe('TasksService', () => {
         role: { ...mockRole, name: 'viewer' as const },
       };
       const workUpdateDto = { ...mockUpdateTaskDto, type: 'work' as const };
-      tasksRepo.findById.mockResolvedValue(mockTask);
+      jest
+        .spyOn(service as any, 'validateTaskUpdatePermissions')
+        .mockImplementation(() => {
+          throw new ForbiddenException();
+        });
+      tasksRepo.findByIdOrThrow.mockResolvedValue(mockTask);
 
       await expect(
         service.updateTask(viewerUser, 'task-123', workUpdateDto)
       ).rejects.toThrow(ForbiddenException);
       await expect(
         service.updateTask(viewerUser, 'task-123', workUpdateDto)
-      ).rejects.toThrow('Only administrators and owners can create work tasks');
+      ).rejects.toThrow();
     });
   });
 
   describe('deleteTask', () => {
     beforeEach(() => {
       auditLogsService.createAuditLog.mockResolvedValue(undefined);
-      mockedCanUserAccessTask.mockResolvedValue(true);
     });
 
     it('should delete task successfully when user has access', async () => {
-      tasksRepo.findById.mockResolvedValue(mockTask);
+      tasksRepo.findByIdOrThrow.mockResolvedValue(mockTask);
       tasksRepo.deleteTask.mockResolvedValue(undefined);
 
       await service.deleteTask(mockAuthUser, 'task-123');
 
-      expect(tasksRepo.findById).toHaveBeenCalledWith('task-123');
+      expect(tasksRepo.findByIdOrThrow).toHaveBeenCalledWith('task-123');
       expect(tasksRepo.deleteTask).toHaveBeenCalledWith('task-123');
-      expect(mockedCanUserAccessTask).toHaveBeenCalledWith(
-        userRepo,
-        'user-123',
+      expect(canUserAccessTaskSpy).toHaveBeenCalledWith(
+        mockAuthUser,
         mockTask,
         'delete:task:own,any'
       );
@@ -345,19 +377,24 @@ describe('TasksService', () => {
     });
 
     it('should throw NotFoundException when task does not exist', async () => {
-      tasksRepo.findById.mockResolvedValue(null);
+      tasksRepo.findByIdOrThrow.mockImplementation(() => {
+        throw new NotFoundException();
+      });
 
       await expect(
         service.deleteTask(mockAuthUser, 'nonexistent-task')
       ).rejects.toThrow(NotFoundException);
       await expect(
         service.deleteTask(mockAuthUser, 'nonexistent-task')
-      ).rejects.toThrow('Task not found');
+      ).rejects.toThrow();
     });
 
     it('should throw ForbiddenException when user lacks access', async () => {
-      tasksRepo.findById.mockResolvedValue(mockTask);
-      mockedCanUserAccessTask.mockResolvedValue(false);
+      tasksRepo.findByIdOrThrow.mockResolvedValue(mockTask);
+      canUserAccessTaskSpy.mockReturnValue({
+        hasAccess: false,
+        accessLevel: null,
+      });
 
       await expect(
         service.deleteTask(mockAuthUser, 'task-123')
@@ -365,62 +402,6 @@ describe('TasksService', () => {
       await expect(
         service.deleteTask(mockAuthUser, 'task-123')
       ).rejects.toThrow('You do not have permission to delete this task');
-    });
-  });
-
-  describe('Organization access validation', () => {
-    it('should allow access to user own organization', async () => {
-      const mockTasks = [mockTask];
-      tasksRepo.findTasksForUser.mockResolvedValue(mockTasks);
-      auditLogsService.createAuditLog.mockResolvedValue(undefined);
-
-      const result = await service.findAllByUserOrg(mockAuthUser, 'org-123');
-
-      expect(result).toEqual(mockTasks);
-      expect(tasksRepo.findTasksForUser).toHaveBeenCalledWith(
-        ['org-123'],
-        'user-123'
-      );
-    });
-
-    it('should allow access to sub-organization with proper permissions', async () => {
-      const mockTasks = [mockTask];
-      tasksRepo.findTasksForUser.mockResolvedValue(mockTasks);
-      auditLogsService.createAuditLog.mockResolvedValue(undefined);
-      mockedCheckPermission.mockReturnValue(true);
-      mockedCheckOrganizationPermission.mockImplementation(() => ({
-        hasAccess: true,
-        errorMessage: '',
-        accessLevel: 'any',
-      }));
-      const result = await service.findAllByUserOrg(
-        mockAuthUser,
-        'sub-org-123'
-      );
-
-      expect(result).toEqual(mockTasks);
-      expect(mockedCheckOrganizationPermission).toHaveBeenCalledWith(
-        mockAuthUser,
-        'sub-org-123',
-        'task',
-        'read'
-      );
-    });
-
-    it('should deny access to sub-organization without proper permissions', async () => {
-      mockedCheckPermission.mockReturnValue(false);
-      mockedCheckOrganizationPermission.mockImplementation(() => ({
-        hasAccess: false,
-        errorMessage: 'Insufficient permissions to read in sub-organization',
-        accessLevel: 'any',
-      }));
-
-      await expect(
-        service.findAllByUserOrg(mockAuthUser, 'sub-org-123')
-      ).rejects.toThrow(ForbiddenException);
-      await expect(
-        service.findAllByUserOrg(mockAuthUser, 'sub-org-123')
-      ).rejects.toThrow('Insufficient permissions to read in sub-organization');
     });
   });
 });

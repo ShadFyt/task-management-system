@@ -5,9 +5,10 @@
 
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
+
 import { AppModule } from './app/app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { DatabaseSeederService } from './app/core/database-seeder.service';
 import { cleanupOpenApiDoc } from 'nestjs-zod';
 
 async function bootstrap() {
@@ -27,10 +28,8 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     credentials: true,
   });
-  if (process.env.NODE_ENV === 'development') {
-    const seeder = app.get(DatabaseSeederService);
-    await seeder.seedAll();
-  }
+
+  app.use(cookieParser());
   const config = new DocumentBuilder()
     .setTitle('Task Management System API')
     .setDescription('API documentation for Task Management System')

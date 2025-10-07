@@ -12,7 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
-import { AuthUser } from '../auth/auth.type';
+import { User as AuthUser } from '@task-management-system/data';
 import { User } from '../../common/decorators/user.decorator';
 import {
   ApiBearerAuth,
@@ -23,27 +23,26 @@ import {
 } from '@nestjs/swagger';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/rbac.decorators';
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto, ZodResponse } from 'nestjs-zod';
 import {
   createTaskSchema,
   Task,
   taskSchema,
   updateTaskSchema,
-  orgIdQuerySchema,
 } from '@task-management-system/data';
+import { OrgIdQueryDto } from '../../common/dtos';
 
 class CreateTaskDto extends createZodDto(createTaskSchema) {}
 class TaskDto extends createZodDto(taskSchema) {}
 class UpdateTaskDto extends createZodDto(updateTaskSchema) {}
-class orgIdQueryDto extends createZodDto(orgIdQuerySchema) {}
 
+@UseGuards(PermissionGuard)
 @ApiTags('tasks')
 @Controller('tasks')
 export class TasksController {
   constructor(private readonly service: TasksService) {}
 
   @Get()
-  @UseGuards(PermissionGuard)
   @RequirePermission('read:task:own,any')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get all tasks accessible to the user' })
@@ -52,13 +51,12 @@ export class TasksController {
     required: false,
     description: 'Organization ID to filter tasks by',
   })
-  @ApiResponse({ status: 200, description: 'List of tasks', type: [TaskDto] })
+  @ZodResponse({ status: 200, description: 'List of tasks', type: [TaskDto] })
   async findAllByUserOrg(
     @User() user: AuthUser,
-    @Query() query: orgIdQueryDto
+    @Query() query: OrgIdQueryDto
   ): Promise<Task[]> {
-    const tasks = await this.service.findAllByUserOrg(user, query.orgId);
-    return taskSchema.array().parse(tasks);
+    return this.service.findAllByUserOrg(user, query.orgId);
   }
 
   /**
@@ -71,11 +69,10 @@ export class TasksController {
    * @returns A promise resolving to the created task.
    */
   @Post()
-  @UseGuards(PermissionGuard)
   @RequirePermission('create:task:own,any')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new task' })
-  @ApiResponse({
+  @ZodResponse({
     status: 201,
     description: 'Task created successfully',
     type: TaskDto,
@@ -84,10 +81,9 @@ export class TasksController {
   async createTask(
     @User() user: AuthUser,
     @Body() dto: CreateTaskDto,
-    @Query() query: orgIdQueryDto
+    @Query() query: OrgIdQueryDto
   ): Promise<Task> {
-    const task = await this.service.createTask(user, dto, query.orgId);
-    return taskSchema.parse(task);
+    return this.service.createTask(user, dto, query.orgId);
   }
 
   /**
@@ -98,11 +94,10 @@ export class TasksController {
    * @returns A promise resolving to the updated task
    */
   @Put(':id')
-  @UseGuards(PermissionGuard)
   @RequirePermission('update:task:own,any')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update an existing task' })
-  @ApiResponse({
+  @ZodResponse({
     status: 200,
     description: 'Task updated successfully',
     type: TaskDto,
@@ -124,7 +119,6 @@ export class TasksController {
    * @param taskId - The ID of the task to delete
    */
   @Delete(':id')
-  @UseGuards(PermissionGuard)
   @RequirePermission('delete:task:own,any')
   @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.NO_CONTENT)
