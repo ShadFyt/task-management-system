@@ -6,9 +6,7 @@ import { Store } from '@ngrx/store';
 import { selectSelectedOrgId } from '../../store';
 import { BareUser } from '@task-management-system/data';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable()
 export class UserService {
   private readonly API_URL = inject(API_BASE);
   private readonly store = inject(Store);
