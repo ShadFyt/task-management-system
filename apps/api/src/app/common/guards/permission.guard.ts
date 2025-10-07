@@ -139,6 +139,6 @@ export class PermissionGuard implements CanActivate {
       actorEmail: user.email,
     };
 
-    await this.auditLogsService.createAuditLog(auditLog);
+    this.auditLogsService.createAuditLog(auditLog);
   }
 }

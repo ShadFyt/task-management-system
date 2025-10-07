@@ -2,7 +2,7 @@ import { Controller, Get, Query, UseGuards, Request } from '@nestjs/common';
 import { AuditLogsService } from './audit-logs.service';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/rbac.decorators';
-import { ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import {
   GetAuditLogsResponse,
   limitQuerySchema,
@@ -37,7 +37,7 @@ export class AuditLogsController {
   @ApiBearerAuth('JWT-auth')
   @ZodResponse({
     status: 200,
-    description: 'List of tasks',
+    description: 'List of audit logs',
     type: GetAuditLogsResponseDto,
   })
   async getAuditLogs(
