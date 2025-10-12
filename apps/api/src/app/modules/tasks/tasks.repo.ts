@@ -50,6 +50,7 @@ export class TasksRepo {
           userId: userId,
         },
       ],
+      relations: ['assignedTo'],
     });
   }
 
