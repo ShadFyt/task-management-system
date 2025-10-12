@@ -66,38 +66,17 @@ import { selectCurrentFilter } from '../../../../store';
         >
           @if (canChangeStatus(task)) {
           <div class="flex flex-wrap gap-2">
-            @if (status() !== 'todo') {
+            @for (statusOption of availableStatuses(); track statusOption.value) {
             <button
-              (click)="changeStatus(task, 'todo')"
-              class="text-yellow-600 hover:text-yellow-800 font-medium px-2 py-1 rounded bg-yellow-50 dark:bg-yellow-900/20 flex items-center gap-1"
-              title="Move to To Do"
+              (click)="changeStatus(task, statusOption.value)"
+              [class]="statusOption.colorClass + ' font-medium px-2 py-1 rounded ' + statusOption.bgClass + ' flex items-center gap-1'"
+              [title]="statusOption.title"
             >
               <lucide-angular
-                [img]="ArrowLeftIcon"
+                [img]="statusOption.icon"
                 class="w-4 h-4"
               ></lucide-angular>
-              <span class="text-sm">To Do</span>
-            </button>
-            } @if (status() !== 'in-progress') {
-            <button
-              (click)="changeStatus(task, 'in-progress')"
-              class="text-blue-600 hover:text-blue-800 font-medium px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/20 flex items-center gap-1"
-              title="Move to In Progress"
-            >
-              <lucide-angular [img]="PlayIcon" class="w-4 h-4"></lucide-angular>
-              <span class="text-sm">Progress</span>
-            </button>
-            } @if (status() !== 'done') {
-            <button
-              (click)="changeStatus(task, 'done')"
-              class="text-green-600 hover:text-green-800 font-medium px-2 py-1 rounded bg-green-50 dark:bg-green-900/20 flex items-center gap-1"
-              title="Move to Done"
-            >
-              <lucide-angular
-                [img]="CircleCheckBig"
-                class="w-4 h-4"
-              ></lucide-angular>
-              <span class="text-sm">Done</span>
+              <span class="text-sm">{{ statusOption.label }}</span>
             </button>
             }
           </div>
@@ -144,6 +123,42 @@ export class TaskList {
     }
 
     return this.tasks();
+  });
+
+  /**
+   * Available status transitions excluding the current status.
+   * Returns array of status buttons to display.
+   */
+  availableStatuses = computed(() => {
+    const current = this.status();
+    const statuses = [
+      {
+        value: 'todo' as const,
+        label: 'To Do',
+        icon: ArrowLeftIcon,
+        colorClass: 'text-yellow-600 hover:text-yellow-800',
+        bgClass: 'bg-yellow-50 dark:bg-yellow-900/20',
+        title: 'Move to To Do',
+      },
+      {
+        value: 'in-progress' as const,
+        label: 'Progress',
+        icon: PlayIcon,
+        colorClass: 'text-blue-600 hover:text-blue-800',
+        bgClass: 'bg-blue-50 dark:bg-blue-900/20',
+        title: 'Move to In Progress',
+      },
+      {
+        value: 'done' as const,
+        label: 'Done',
+        icon: CircleCheckBig,
+        colorClass: 'text-green-600 hover:text-green-800',
+        bgClass: 'bg-green-50 dark:bg-green-900/20',
+        title: 'Move to Done',
+      },
+    ];
+
+    return statuses.filter((s) => s.value !== current);
   });
 
   /**
