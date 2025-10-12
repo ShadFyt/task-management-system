@@ -55,6 +55,12 @@ import { selectCurrentFilter } from '../../../../store';
         </p>
         }
 
+        <div class="mb-3">
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300">
+            {{ task.assignedTo?.name || 'Unassigned' }}
+          </span>
+        </div>
+
         <div
           class="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-2 sm:space-y-0 text-xs"
         >
