@@ -87,6 +87,7 @@ import { UserService } from '../../../../core/services/user.service';
             </select>
           </div>
 
+          @if (showAssignmentField()) {
           <div class="md:col-span-2">
             <label for="assignedUser" class="form-label"> Assigned User </label>
             <select
@@ -94,15 +95,16 @@ import { UserService } from '../../../../core/services/user.service';
               formControlName="assignedToId"
               class="form-input"
             >
-              <option value="">Unassigned</option>
-              @for (user of users.value(); track user.id) {
+              <option [value]="undefined">Unassigned</option>
+              @for (user of users()?.value(); track user.id) {
               <option [value]="user.id">{{ user.name }}</option>
               }
             </select>
-            @if (users.isLoading()) {
+            @if (users()?.isLoading()) {
             <p class="text-sm text-gray-500 mt-1">Loading users...</p>
             }
           </div>
+          }
         </div>
 
         @if (error()) {
@@ -151,13 +153,31 @@ export class TaskForm {
   readonly error = this._error.asReadonly();
 
   readonly canSubmit = computed(() => this.taskForm.valid && !this.loading());
+
+  /**
+   * Check if user can create work tasks (requires 'create.task.any' permission).
+   * Users without this permission can only create personal tasks.
+   */
   hasAnyPermission = computed(() => {
     const user = this.authService.user();
     if (!user) return false;
     return checkPermission(user.role, 'task', 'create', 'any');
   });
 
-  readonly users = this.userService.users;
+  /**
+   * Only fetch users for work tasks.
+   * Personal tasks are auto-assigned to the creator.
+   */
+  readonly users = computed(() => {
+    return this.hasAnyPermission() ? this.userService.users : null;
+  });
+
+  /**
+   * Show assignment dropdown only for work tasks.
+   */
+  readonly showAssignmentField = computed(() => {
+    return this.hasAnyPermission();
+  });
 
   selectClasses = computed(() => {
     const hasPermission = this.hasAnyPermission();
@@ -181,13 +201,18 @@ export class TaskForm {
         'medium',
         [Validators.required, zodValidator(createTaskSchema.shape.priority)],
       ],
-      assignedToId: ['', [zodValidator(createTaskSchema.shape.assignedToId)]],
+      assignedToId: [null, [zodValidator(createTaskSchema.shape.assignedToId)]],
     });
 
     effect(() => {
       const typeControl = this.taskForm.get('type');
+      const assignedToIdControl = this.taskForm.get('assignedToId');
+      const currentUser = this.authService.user();
+
       if (!this.hasAnyPermission()) {
+        // Force personal type and auto-assign to current user
         typeControl?.setValue('personal');
+        assignedToIdControl?.setValue(currentUser?.id);
       }
     });
   }
@@ -200,8 +225,15 @@ export class TaskForm {
     this._loading.set(true);
     try {
       const formValue = this.taskForm.value;
+      const currentUser = this.authService.user();
+
+      // For personal tasks, always assign to current user
       const taskData = {
         ...formValue,
+        assignedToId:
+          formValue.type === 'personal'
+            ? currentUser?.id
+            : formValue.assignedToId || null,
         dueDate: formValue.dueDate || undefined,
       };
       await this.taskService.createTask(taskData);
@@ -231,10 +263,13 @@ export class TaskForm {
   }
 
   private resetForm(): void {
+    const currentUser = this.authService.user();
+    const hasPermission = this.hasAnyPermission();
+
     this.taskForm.reset({
-      type: 'personal',
+      type: hasPermission ? 'work' : 'personal',
       priority: 'medium',
-      assignedToId: '',
+      assignedToId: hasPermission ? null : currentUser?.id,
     });
     this._error.set(null);
   }

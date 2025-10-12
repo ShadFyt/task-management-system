@@ -64,6 +64,7 @@ import { selectCurrentFilter } from '../../../../store';
         <div
           class="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-2 sm:space-y-0 text-xs"
         >
+          @if (canChangeStatus(task)) {
           <div class="flex flex-wrap gap-2">
             @if (status() !== 'todo') {
             <button
@@ -100,6 +101,7 @@ import { selectCurrentFilter } from '../../../../store';
             </button>
             }
           </div>
+          }
 
           @if (canDeleteTask(task)) {
           <button
@@ -144,6 +146,28 @@ export class TaskList {
     return this.tasks();
   });
 
+  /**
+   * Check if user can change task status.
+   * User can change status if:
+   * - They are assigned to the task, OR
+   * - They have 'update.task.any' permission
+   */
+  canChangeStatus = (task: Task): boolean => {
+    const user = this.authService.user();
+    if (!user?.role) return false;
+
+    const isAssignedTo = task.assignedToId === user.id;
+    const hasUpdateAny = checkPermission(user.role, 'task', 'update', 'any');
+
+    return isAssignedTo || hasUpdateAny;
+  };
+
+  /**
+   * Check if user can delete task.
+   * User can delete if:
+   * - Task is personal AND they own it, OR
+   * - They have 'delete.task.any' permission
+   */
   canDeleteTask = (task: Task): boolean => {
     const user = this.authService.user();
     if (!user?.role) return false;

@@ -57,7 +57,11 @@ export class TasksRepo {
   async createTask(taskData: Partial<Task>): Promise<Task> {
     try {
       const task = this.repo.create(taskData);
-      return await this.repo.save(task);
+      const saved = await this.repo.save(task);
+      return await this.repo.findOne({
+        where: { id: saved.id },
+        relations: ['assignedTo'],
+      });
     } catch {
       throw new BadRequestException('Failed to create task');
     }
