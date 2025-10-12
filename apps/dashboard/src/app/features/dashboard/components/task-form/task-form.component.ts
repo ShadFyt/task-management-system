@@ -18,11 +18,13 @@ import { checkPermission } from '@task-management-system/auth';
 import { AuthService } from '../../../../core/services/auth.service';
 import { zodValidator } from '../../../../core/utils/zod-validators';
 import { createTaskSchema } from '@task-management-system/data';
+import { UserService } from '../../../../core/services/user.service';
 
 @Component({
   selector: 'app-task-form',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
+  providers: [UserService],
   styles: [],
   template: `
     <div class="card">
@@ -84,6 +86,23 @@ import { createTaskSchema } from '@task-management-system/data';
               <option value="high">High</option>
             </select>
           </div>
+
+          <div class="md:col-span-2">
+            <label for="assignedUser" class="form-label"> Assigned User </label>
+            <select
+              id="assignedUser"
+              formControlName="assignedToId"
+              class="form-input"
+            >
+              <option value="">Unassigned</option>
+              @for (user of users.value(); track user.id) {
+              <option [value]="user.id">{{ user.name }}</option>
+              }
+            </select>
+            @if (users.isLoading()) {
+            <p class="text-sm text-gray-500 mt-1">Loading users...</p>
+            }
+          </div>
         </div>
 
         @if (error()) {
@@ -120,6 +139,7 @@ export class TaskForm {
   private fb = inject(FormBuilder);
   private taskService = inject(TaskService);
   private authService = inject(AuthService);
+  private userService = inject(UserService);
   taskForm: FormGroup;
 
   taskCreated = output<void>();
@@ -136,6 +156,8 @@ export class TaskForm {
     if (!user) return false;
     return checkPermission(user.role, 'task', 'create', 'any');
   });
+
+  readonly users = this.userService.users;
 
   selectClasses = computed(() => {
     const hasPermission = this.hasAnyPermission();
@@ -159,6 +181,7 @@ export class TaskForm {
         'medium',
         [Validators.required, zodValidator(createTaskSchema.shape.priority)],
       ],
+      assignedToId: ['', [zodValidator(createTaskSchema.shape.assignedToId)]],
     });
 
     effect(() => {
@@ -211,6 +234,7 @@ export class TaskForm {
     this.taskForm.reset({
       type: 'personal',
       priority: 'medium',
+      assignedToId: '',
     });
     this._error.set(null);
   }

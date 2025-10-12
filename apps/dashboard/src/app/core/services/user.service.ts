@@ -19,6 +19,6 @@ export class UserService {
         orgId: this.selectedOrgId() ?? '',
       },
     }),
-    {}
+    { defaultValue: [] }
   );
 }

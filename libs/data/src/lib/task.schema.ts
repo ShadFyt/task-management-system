@@ -12,6 +12,7 @@ export const createTaskSchema = z.object({
   content: z.string(),
   type: TaskTypeEnum,
   priority: TaskPriorityEnum,
+  assignedToId: z.string().optional(),
 });
 
 export const updateTaskSchema = createTaskSchema
