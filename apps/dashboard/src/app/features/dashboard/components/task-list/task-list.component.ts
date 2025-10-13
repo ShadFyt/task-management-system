@@ -56,7 +56,9 @@ import { selectCurrentFilter } from '../../../../store';
         }
 
         <div class="mb-3">
-          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300">
+          <span
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
+          >
             {{ task.assignedTo?.name || 'Unassigned' }}
           </span>
         </div>
@@ -66,10 +68,16 @@ import { selectCurrentFilter } from '../../../../store';
         >
           @if (canChangeStatus(task)) {
           <div class="flex flex-wrap gap-2">
-            @for (statusOption of availableStatuses(); track statusOption.value) {
+            @for (statusOption of availableStatuses(); track statusOption.value)
+            {
             <button
               (click)="changeStatus(task, statusOption.value)"
-              [class]="statusOption.colorClass + ' font-medium px-2 py-1 rounded ' + statusOption.bgClass + ' flex items-center gap-1'"
+              [class]="
+                statusOption.colorClass +
+                ' font-medium px-2 py-1 rounded ' +
+                statusOption.bgClass +
+                ' flex items-center gap-1'
+              "
               [title]="statusOption.title"
             >
               <lucide-angular
@@ -80,9 +88,7 @@ import { selectCurrentFilter } from '../../../../store';
             </button>
             }
           </div>
-          }
-
-          @if (canDeleteTask(task)) {
+          } @if (canDeleteTask(task)) {
           <button
             (click)="deleteTask(task)"
             class="text-red-600 hover:text-red-800 font-medium p-2 rounded bg-red-50 dark:bg-red-900/20 flex items-center justify-center"
@@ -169,6 +175,7 @@ export class TaskList {
    */
   canChangeStatus = (task: Task): boolean => {
     const user = this.authService.user();
+    if (task.userId === user?.id) return true;
     if (!user?.role) return false;
 
     const isAssignedTo = task.assignedToId === user.id;
