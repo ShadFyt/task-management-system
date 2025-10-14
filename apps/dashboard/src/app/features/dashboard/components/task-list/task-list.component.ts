@@ -11,6 +11,7 @@ import {
   ArrowLeftIcon,
   PlayIcon,
   CircleCheckBig,
+  ChevronDownIcon,
 } from 'lucide-angular';
 import { AuthService } from '../../../../core/services/auth.service';
 import { UserService } from '../../../../core/services/user.service';
@@ -58,22 +59,54 @@ import { selectCurrentFilter } from '../../../../store';
         </p>
         }
 
-        <div class="mb-3">
+        <div class="mb-3 relative">
           @if (canEditAssignedTo(task)) {
-          <select
-            [value]="task.assignedToId"
-            (change)="updateAssignedTo(task, $event)"
-            class="form-input"
-            [disabled]="updatingAssignment() === task.id"
-          >
-            <option [value]="null">Unassigned</option>
-            @for (user of users()?.value(); track user.id) {
-            <option [value]="user.id">{{ user.name }}</option>
+          <div class="relative inline-block">
+            <button
+              type="button"
+              (click)="toggleDropdown(task.id)"
+              [disabled]="updatingAssignment() === task.id"
+              class="text-xs font-medium px-3 py-1.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+            >
+              <span>{{ task.assignedTo?.name || 'Unassigned' }}</span>
+              <lucide-angular
+                [img]="ChevronDownIcon"
+                class="w-3 h-3"
+              ></lucide-angular>
+            </button>
+            @if (openDropdown() === task.id) {
+            <div
+              class="absolute z-10 mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 max-h-60 overflow-auto"
+            >
+              <button
+                type="button"
+                (click)="selectUser(task, null)"
+                class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-150"
+                [ngClass]="{
+                  'bg-blue-100 dark:bg-blue-900/30': !task.assignedToId
+                }"
+              >
+                <span class="font-medium">Unassigned</span>
+              </button>
+              @for (user of users()?.value(); track user.id) {
+              <button
+                type="button"
+                (click)="selectUser(task, user.id)"
+                class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-150"
+                [ngClass]="{
+                  'bg-blue-100 dark:bg-blue-900/30':
+                    task.assignedToId === user.id
+                }"
+              >
+                <span class="font-medium">{{ user.name }}</span>
+              </button>
+              }
+            </div>
             }
-          </select>
+          </div>
           } @else {
           <span
-            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
           >
             {{ task.assignedTo?.name || 'Unassigned' }}
           </span>
@@ -139,6 +172,7 @@ export class TaskList {
   tasks = input.required<Task[]>();
   deleting = signal<string | null>(null);
   updatingAssignment = signal<string | null>(null);
+  openDropdown = signal<string | null>(null);
   currentFilter = this.store.selectSignal(selectCurrentFilter);
 
   /**
@@ -263,17 +297,27 @@ export class TaskList {
   }
 
   /**
-   * Update task assignment.
-   * Handles null value for unassigned tasks.
+   * Toggle dropdown visibility for a specific task.
    */
-  async updateAssignedTo(task: Task, event: Event) {
-    const newAssignedToId = (event.target as HTMLSelectElement).value;
-    if (task.assignedToId === newAssignedToId) return;
+  toggleDropdown(taskId: string) {
+    if (this.openDropdown() === taskId) {
+      this.openDropdown.set(null);
+    } else {
+      this.openDropdown.set(taskId);
+    }
+  }
+
+  /**
+   * Select a user and update task assignment.
+   */
+  async selectUser(task: Task, userId: string | null) {
+    this.openDropdown.set(null);
+    if (task.assignedToId === userId) return;
 
     this.updatingAssignment.set(task.id);
     try {
       await this.taskService.updateTask(task.id, {
-        assignedToId: newAssignedToId || null,
+        assignedToId: userId || null,
       });
     } catch (e) {
       console.error('Failed to update assignment:', e);
@@ -313,4 +357,5 @@ export class TaskList {
   protected readonly ArrowLeftIcon = ArrowLeftIcon;
   protected readonly PlayIcon = PlayIcon;
   protected readonly CircleCheckBig = CircleCheckBig;
+  protected readonly ChevronDownIcon = ChevronDownIcon;
 }

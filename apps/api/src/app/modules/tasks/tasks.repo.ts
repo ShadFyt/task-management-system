@@ -75,7 +75,7 @@ export class TasksRepo {
   async findById(id: string): Promise<Task | null> {
     return this.repo.findOne({
       where: { id },
-      relations: ['user', 'organization'],
+      relations: ['user', 'organization', 'assignedTo'],
     });
   }
 
