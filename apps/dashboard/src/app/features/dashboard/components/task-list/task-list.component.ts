@@ -1,5 +1,6 @@
 import { Component, signal, inject, computed, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Store } from '@ngrx/store';
 import { TaskService } from '../../../../core/services/task.service';
 import { Task } from '@task-management-system/data';
@@ -12,13 +13,15 @@ import {
   CircleCheckBig,
 } from 'lucide-angular';
 import { AuthService } from '../../../../core/services/auth.service';
+import { UserService } from '../../../../core/services/user.service';
 import { checkPermission } from '@task-management-system/auth';
 import { selectCurrentFilter } from '../../../../store';
 
 @Component({
   selector: 'app-task-list',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
+  providers: [UserService],
   template: `
     <div class="min-h-[200px] p-3 sm:p-4">
       @if (filteredTasks().length === 0) {
@@ -56,11 +59,25 @@ import { selectCurrentFilter } from '../../../../store';
         }
 
         <div class="mb-3">
+          @if (canEditAssignedTo(task)) {
+          <select
+            [value]="task.assignedToId"
+            (change)="updateAssignedTo(task, $event)"
+            class="form-input"
+            [disabled]="updatingAssignment() === task.id"
+          >
+            <option [value]="null">Unassigned</option>
+            @for (user of users()?.value(); track user.id) {
+            <option [value]="user.id">{{ user.name }}</option>
+            }
+          </select>
+          } @else {
           <span
             class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
           >
             {{ task.assignedTo?.name || 'Unassigned' }}
           </span>
+          }
         </div>
 
         <div
@@ -116,11 +133,24 @@ export class TaskList {
   private store = inject(Store);
   private taskService = inject(TaskService);
   private authService = inject(AuthService);
+  private userService = inject(UserService);
 
   status = input<'todo' | 'in-progress' | 'done'>('todo');
   tasks = input.required<Task[]>();
   deleting = signal<string | null>(null);
+  updatingAssignment = signal<string | null>(null);
   currentFilter = this.store.selectSignal(selectCurrentFilter);
+
+  /**
+   * Fetch users for assignment dropdown.
+   * Only loaded when needed for work tasks.
+   */
+  users = computed(() => {
+    const user = this.authService.user();
+    if (!user?.role) return null;
+    const hasPermission = checkPermission(user.role, 'task', 'update', 'any');
+    return hasPermission ? this.userService.users : null;
+  });
 
   filteredTasks = computed(() => {
     const filter = this.currentFilter();
@@ -200,6 +230,20 @@ export class TaskList {
     return (task.type === 'personal' && isOwnTask) || hasDeleteAny;
   };
 
+  /**
+   * Check if user can edit assignedTo field.
+   * User can edit if:
+   * - Task is a work task, AND
+   * - They have 'update.task.any' permission
+   */
+  canEditAssignedTo = (task: Task): boolean => {
+    const user = this.authService.user();
+    if (!user?.role) return false;
+    if (task.type !== 'work') return false;
+
+    return checkPermission(user.role, 'task', 'update', 'any');
+  };
+
   async changeStatus(task: Task, newStatus: 'todo' | 'in-progress' | 'done') {
     try {
       await this.taskService.updateTask(task.id, { status: newStatus });
@@ -215,6 +259,26 @@ export class TaskList {
       await this.taskService.deleteTask(task.id);
     } finally {
       this.deleting.set(null);
+    }
+  }
+
+  /**
+   * Update task assignment.
+   * Handles null value for unassigned tasks.
+   */
+  async updateAssignedTo(task: Task, event: Event) {
+    const newAssignedToId = (event.target as HTMLSelectElement).value;
+    if (task.assignedToId === newAssignedToId) return;
+
+    this.updatingAssignment.set(task.id);
+    try {
+      await this.taskService.updateTask(task.id, {
+        assignedToId: newAssignedToId || null,
+      });
+    } catch (e) {
+      console.error('Failed to update assignment:', e);
+    } finally {
+      this.updatingAssignment.set(null);
     }
   }
 
