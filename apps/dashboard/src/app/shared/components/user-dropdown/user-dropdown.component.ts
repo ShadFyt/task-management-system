@@ -44,7 +44,7 @@ import { UserService } from '../../../core/services/user.service';
           <span class="font-medium">Unassigned</span>
         </button>
 
-        @for (user of users()?.value(); track user.id) {
+        @for (user of users().value(); track user.id) {
         <button
           type="button"
           (click)="selectUser(user.id)"
@@ -60,7 +60,7 @@ import { UserService } from '../../../core/services/user.service';
       }
     </div>
 
-    @if (users()?.isLoading()) {
+    @if (users().isLoading()) {
     <p class="text-sm text-gray-500 mt-1">Loading users...</p>
     }
   `,
