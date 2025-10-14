@@ -11,7 +11,7 @@ import { signal } from '@angular/core';
 import { Store } from '@ngrx/store';
 
 import { TaskService } from './task.service';
-import { API_BASE } from '../tokens';
+import { API_BASE } from '../../tokens';
 
 class MockStore {
   orgIdSig = signal<string | null>(null);

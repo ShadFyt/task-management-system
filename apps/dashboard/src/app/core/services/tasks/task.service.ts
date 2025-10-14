@@ -2,10 +2,10 @@ import { Injectable, inject, signal, effect } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Store } from '@ngrx/store';
 import { firstValueFrom, catchError, finalize, throwError } from 'rxjs';
-import { API_BASE } from '../tokens';
+import { API_BASE } from '../../tokens';
 import { CreateTask, Task, UpdateTask } from '@task-management-system/data';
-import { selectSelectedOrgId } from '../../store';
-import { AuthService } from './auth.service';
+import { selectSelectedOrgId } from '../../../store';
+import { AuthService } from '../auth.service';
 
 /**
  * TaskService - service for task management.

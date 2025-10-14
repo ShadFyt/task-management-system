@@ -12,6 +12,7 @@ export const createTaskSchema = z.object({
   content: z.string(),
   type: TaskTypeEnum,
   priority: TaskPriorityEnum,
+  assignedToId: z.string().or(z.null()).optional(),
 });
 
 export const updateTaskSchema = createTaskSchema
@@ -33,6 +34,12 @@ export const taskSchema = z.object({
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
   assignedToId: z.string().or(z.null()).optional(),
+  assignedTo: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+    })
+    .or(z.null()),
 });
 
 export type CreateTask = z.infer<typeof createTaskSchema>;

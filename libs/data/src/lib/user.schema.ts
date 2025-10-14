@@ -24,3 +24,5 @@ export const userBareSchema = userSchema.omit({
 });
 
 export type AuthenticatedUser = z.infer<typeof userBareSchema>;
+
+export type BareUser = z.infer<typeof userBareSchema>;
