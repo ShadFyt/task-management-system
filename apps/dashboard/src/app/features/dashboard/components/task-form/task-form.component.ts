@@ -19,11 +19,12 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { zodValidator } from '../../../../core/utils/zod-validators';
 import { createTaskSchema } from '@task-management-system/data';
 import { UserService } from '../../../../core/services/user.service';
+import { UserDropdown } from '../../../../shared/components/user-dropdown/user-dropdown.component';
 
 @Component({
   selector: 'app-task-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, UserDropdown],
   providers: [UserService],
   styles: [],
   template: `
@@ -89,20 +90,10 @@ import { UserService } from '../../../../core/services/user.service';
 
           @if (showAssignmentField()) {
           <div class="md:col-span-2">
-            <label for="assignedUser" class="form-label"> Assigned User </label>
-            <select
-              id="assignedUser"
-              formControlName="assignedToId"
-              class="form-input"
-            >
-              <option [value]="undefined">Unassigned</option>
-              @for (user of users()?.value(); track user.id) {
-              <option [value]="user.id">{{ user.name }}</option>
-              }
-            </select>
-            @if (users()?.isLoading()) {
-            <p class="text-sm text-gray-500 mt-1">Loading users...</p>
-            }
+            <app-user-dropdown
+              [selectedUserId]="taskForm.get('assignedToId')?.value"
+              (userSelected)="onUserSelected($event)"
+            />
           </div>
           }
         </div>
@@ -162,14 +153,6 @@ export class TaskForm {
     const user = this.authService.user();
     if (!user) return false;
     return checkPermission(user.role, 'task', 'create', 'any');
-  });
-
-  /**
-   * Only fetch users for work tasks.
-   * Personal tasks are auto-assigned to the creator.
-   */
-  readonly users = computed(() => {
-    return this.hasAnyPermission() ? this.userService.users : null;
   });
 
   /**
@@ -260,6 +243,10 @@ export class TaskForm {
     }
 
     this._error.set(errorMessage);
+  }
+
+  onUserSelected(userId: string | null): void {
+    this.taskForm.get('assignedToId')?.setValue(userId);
   }
 
   private resetForm(): void {
