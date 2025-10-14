@@ -2,7 +2,7 @@ import { Component, signal, inject, computed, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Store } from '@ngrx/store';
-import { TaskService } from '../../../../core/services/task.service';
+import { TaskService } from '../../../../core/services/tasks/task.service';
 import { Task } from '@task-management-system/data';
 import {
   LucideAngularModule,

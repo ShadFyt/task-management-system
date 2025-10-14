@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Store } from '@ngrx/store';
 import { AuthService } from '../../core/services/auth.service';
-import { TaskService } from '../../core/services/task.service';
+import { TaskService } from '../../core/services/tasks/task.service';
 import { TaskList } from './components/task-list/task-list.component';
 import { TaskForm } from './components/task-form/task-form.component';
 import { OrganizationSelector } from './components/organization-selector/organization-selector.component';

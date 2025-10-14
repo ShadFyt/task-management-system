@@ -13,7 +13,7 @@ import {
   ReactiveFormsModule,
   FormBuilder,
 } from '@angular/forms';
-import { TaskService } from '../../../../core/services/task.service';
+import { TaskService } from '../../../../core/services/tasks/task.service';
 import { checkPermission } from '@task-management-system/auth';
 import { AuthService } from '../../../../core/services/auth.service';
 import { zodValidator } from '../../../../core/utils/zod-validators';
