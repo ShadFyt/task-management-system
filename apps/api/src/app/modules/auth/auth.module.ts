@@ -23,9 +23,6 @@ import { RefreshJwtStrategy } from './strategies/refresh.strategy';
           'JWT_SECRET',
           'a-string-secret-at-least-256-bits-long'
         ),
-        signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRES_IN', '1h'),
-        },
       }),
       inject: [ConfigService],
     }),
