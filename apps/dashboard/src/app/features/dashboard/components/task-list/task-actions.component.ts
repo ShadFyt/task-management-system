@@ -8,7 +8,9 @@ import {
   PlayIcon,
   CircleCheckBig,
 } from 'lucide-angular';
+import { ToastrService } from 'ngx-toastr';
 import { TaskContextService } from '../../../../core/services/tasks/task-context.service';
+import { ConfirmationToast } from '../../../../shared/components/confirmation-toast/confirmation-toast.component';
 
 @Component({
   selector: 'app-task-actions',
@@ -48,10 +50,7 @@ import { TaskContextService } from '../../../../core/services/tasks/task-context
         [disabled]="isDeleting()"
       >
         @if (isDeleting()) {
-        <lucide-angular
-          class="w-4 h-4"
-          [img]="HourglassIcon"
-        ></lucide-angular>
+        <lucide-angular class="w-4 h-4" [img]="HourglassIcon"></lucide-angular>
         } @else {
         <lucide-angular class="w-4 h-4" [img]="TrashIcon"></lucide-angular>
         }
@@ -63,6 +62,7 @@ import { TaskContextService } from '../../../../core/services/tasks/task-context
 })
 export class TaskActions {
   private ctx = inject(TaskContextService);
+  private toastr = inject(ToastrService);
 
   task = this.ctx.task;
   permissions = this.ctx.permissions;
@@ -115,6 +115,30 @@ export class TaskActions {
   }
 
   async deleteTask() {
-    await this.ctx.deleteTask();
+    const task = this.task();
+    if (!task) return;
+
+    this.toastr
+      .show(
+        `Are you sure you want to delete "${task.title}"?`,
+        'Confirm Delete',
+        {
+          toastComponent: ConfirmationToast,
+          toastClass: 'ngx-toastr confirmation-toast',
+          timeOut: 0,
+          closeButton: true,
+          tapToDismiss: false,
+          disableTimeOut: true,
+        }
+      )
+      .onAction.subscribe(async () => {
+        try {
+          await this.ctx.deleteTask();
+          this.toastr.success('Task deleted successfully', 'Success');
+        } catch (error) {
+          this.toastr.error('Failed to delete task', 'Error');
+          console.error('Delete task error:', error);
+        }
+      });
   }
 }

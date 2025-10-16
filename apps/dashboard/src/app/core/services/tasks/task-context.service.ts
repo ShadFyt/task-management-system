@@ -49,11 +49,11 @@ export class TaskContextService {
 
   /**
    * Delete the task
+   * Note: Confirmation should be handled by the caller
    */
   async deleteTask() {
     const task = this.task();
     if (!task) return;
-    if (!confirm(`Delete "${task.title}"?`)) return;
 
     this.isDeleting.set(true);
     try {
