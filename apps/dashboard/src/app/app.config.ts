@@ -9,6 +9,8 @@ import { provideStore } from '@ngrx/store';
 import { appRoutes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { appReducer } from './store';
+import { provideToastr } from 'ngx-toastr';
+import { provideAnimations } from '@angular/platform-browser/animations';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -17,5 +19,9 @@ export const appConfig: ApplicationConfig = {
     provideRouter(appRoutes),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideStore({ app: appReducer }),
+    provideAnimations(),
+    provideToastr({
+      positionClass: 'toast-bottom-right',
+    }),
   ],
 };
